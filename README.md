@@ -194,7 +194,7 @@ Arquivo de dependências: `requirements.txt`
 ### 1) Clonar o repositório
 
 ```bash
-git clone https://github.com/Megadurck/smart-shedule-api.git
+git clone https://github.com/Megadurck/smart-schedule-api.git
 cd smart-shedule-api
 ```
 
