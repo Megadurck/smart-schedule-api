@@ -1,0 +1,152 @@
+from fastapi import APIRouter, Depends, HTTPException
+from datetime import time as time_type
+from pydantic import BaseModel, field_validator
+from typing import Union
+
+from app.database.session import get_db
+from app.services import working_hours_service
+from app.enum.weekday import Weekday
+
+
+class WorkingHoursCreate(BaseModel):
+    """Schema para definir horários de funcionamento via JSON"""
+    weekday: Weekday  # 0 = segunda, 6 = domingo
+    start_time: str  # Formato: HH:MM:SS
+    end_time: str  # Formato: HH:MM:SS
+    slot_duration_minutes: int = 30  # Duração de cada atendimento em minutos
+    lunch_start: str | None = "12:00:00"  # Pausa de almoço início
+    lunch_end: str | None = "14:00:00"    # Pausa de almoço fim
+
+    @field_validator('weekday', mode='before')
+    @classmethod
+    def validate_weekday(cls, v: Union[str, int]) -> Weekday:
+        if isinstance(v, str):
+            try:
+                return Weekday[v.upper()]
+            except KeyError:
+                raise ValueError(f"Invalid weekday name: {v}")
+        elif isinstance(v, int):
+            try:
+                return Weekday(v)
+            except ValueError:
+                raise ValueError(f"Invalid weekday value: {v}")
+        else:
+            raise ValueError("Weekday must be int or str")
+
+
+router = APIRouter(prefix="/working-hours", tags=["Working Hours"])
+
+
+# 🔹 LISTAR TODOS OS HORÁRIOS DE FUNCIONAMENTO
+@router.get("/")
+def list_working_hours(db = Depends(get_db)):
+    """Lista todos os horários de funcionamento configurados"""
+    return working_hours_service.list_working_hours(db)
+
+
+# 🔹 DEFINIR HORÁRIO DE FUNCIONAMENTO
+@router.post("/")
+def set_working_hours(
+    payload: WorkingHoursCreate,
+    db = Depends(get_db),
+):
+    """Define o horário de funcionamento para um dia da semana via JSON
+    
+    Parâmetros:
+    - weekday: Dia da semana (0=segunda, 1=terça, 2=quarta, 3=quinta, 4=sexta, 5=sábado, 6=domingo)
+    - start_time: Horário de início no formato HH:MM:SS
+    - end_time: Horário de fim no formato HH:MM:SS
+    - slot_duration_minutes: Duração de cada slot em minutos (padrão 30)
+    - lunch_start: Horário de início do almoço (padrão 12:00:00)
+    - lunch_end: Horário de fim do almoço (padrão 14:00:00)
+    """
+    return _validate_and_set_working_hours(
+        db, 
+        payload.weekday, 
+        payload.start_time, 
+        payload.end_time,
+        payload.slot_duration_minutes,
+        payload.lunch_start,
+        payload.lunch_end,
+    )
+
+
+# 🔹 CALCULAR SLOTS DISPONÍVEIS
+@router.get("/slots/{weekday}")
+def get_available_slots(weekday: Weekday, db = Depends(get_db)):
+    """Calcula quantos slots de atendimento estão disponíveis para um dia
+    
+    Exemplo de resposta:
+    {
+        "weekday": 0,
+        "available_slots": 16,
+        "total_available_minutes": 480,
+        "lunch_duration_minutes": 120,
+        "slot_duration_minutes": 30
+    }
+    """
+    return working_hours_service.calculate_available_slots(db, weekday.value)
+
+
+def _validate_and_set_working_hours(
+    db, weekday: Weekday, start_time: str, end_time: str, 
+    slot_duration_minutes: int = 30, lunch_start: str | None = "12:00:00", 
+    lunch_end: str | None = "14:00:00"
+):
+    """Realiza validações de domínio e configura horários de funcionamento
+    
+    Validações aplicadas:
+    - Formatos de hora devem ser HH:MM:SS
+    - Hora inicial deve ser anterior à hora final
+    - Se almoço definido: início deve ser anterior ao fim
+    - Almoço deve estar completamente dentro do horário de trabalho
+    - Duração de slot deve ser positiva
+    - Weekday deve estar entre 0 e 6
+    
+    Retorna:
+    - Objeto WorkingHours criado ou atualizado
+    """
+    try:
+        start = time_type.fromisoformat(start_time)
+        end = time_type.fromisoformat(end_time)
+        lunch_start_time = time_type.fromisoformat(lunch_start) if lunch_start else None
+        lunch_end_time = time_type.fromisoformat(lunch_end) if lunch_end else None
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail="Formato de hora inválido. Use HH:MM:SS",
+        )
+    
+    if start >= end:
+        raise HTTPException(
+            status_code=400,
+            detail="A hora inicial deve ser anterior à hora final",
+        )
+    
+    if lunch_start_time and lunch_end_time:
+        if lunch_start_time >= lunch_end_time:
+            raise HTTPException(
+                status_code=400,
+                detail="A hora de início do almoço deve ser anterior à de fim",
+            )
+        if not (start <= lunch_start_time and lunch_end_time <= end):
+            raise HTTPException(
+                status_code=400,
+                detail="Horário de almoço deve estar dentro do expediente",
+            )
+    
+    if slot_duration_minutes <= 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Duração do slot deve ser maior que 0 minutos",
+        )
+    
+    if weekday.value < 0 or weekday.value > 6:
+        raise HTTPException(
+            status_code=400,
+            detail="weekday deve estar entre 0 (segunda) e 6 (domingo)",
+        )
+    
+    return working_hours_service.set_working_hours(
+        db, weekday.value, start, end, slot_duration_minutes, lunch_start_time, lunch_end_time
+    )
