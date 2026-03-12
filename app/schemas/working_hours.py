@@ -1,8 +1,9 @@
 """Schemas de horário de funcionamento.
 
-Este módulo centraliza os contratos de entrada da API de expediente.
+Este módulo centraliza os contratos de entrada e saída da API de expediente.
 """
 
+from datetime import time
 from typing import Union
 
 from pydantic import BaseModel, field_validator
@@ -39,3 +40,23 @@ class WorkingHoursCreate(BaseModel):
                 raise ValueError(f"Invalid weekday value: {value}") from exc
 
         raise ValueError("Weekday must be int or str")
+
+
+# ---------------------------------------------------------------------------
+# Schemas de saída (o que a API devolve)
+# ---------------------------------------------------------------------------
+
+class WorkingHoursResponse(BaseModel):
+    """Resposta de um horário de funcionamento: expõe só campos seguros."""
+
+    id: int
+    weekday: int
+    # Pydantic serializa datetime.time para string "HH:MM:SS" automaticamente.
+    start_time: time
+    end_time: time
+    slot_duration_minutes: int
+    lunch_start: time | None
+    lunch_end: time | None
+    is_active: bool
+
+    model_config = {"from_attributes": True}

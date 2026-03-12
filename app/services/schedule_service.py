@@ -63,10 +63,13 @@ def create_schedule(db: Session, client_name: str, date_str: str, time_str: str)
 
     # Validações de negócio
     if schedule_repository.check_conflict(db, schedule_date, schedule_time):
-        return {"detail": "Horário já ocupado"}
+        raise HTTPException(status_code=409, detail="Horário já ocupado")
     
     if not validate_working_hours(db, schedule_date, schedule_time):
-        return {"detail": "Horário fora do funcionamento. Verifique os horários de trabalho disponíveis."}
+        raise HTTPException(
+            status_code=422,
+            detail="Horário fora do funcionamento. Verifique os horários de trabalho disponíveis.",
+        )
 
     # Obter ou criar cliente
     client = client_repository.find_or_create_client(db, client_name)
@@ -84,10 +87,13 @@ def update_schedule(
 
     # Validações de negócio
     if schedule_repository.check_conflict(db, schedule_date, schedule_time, exclude_id=schedule_id):
-        return {"detail": "Horário já ocupado"}
+        raise HTTPException(status_code=409, detail="Horário já ocupado")
     
     if not validate_working_hours(db, schedule_date, schedule_time):
-        return {"detail": "Horário fora do funcionamento. Verifique os horários de trabalho disponíveis."}
+        raise HTTPException(
+            status_code=422,
+            detail="Horário fora do funcionamento. Verifique os horários de trabalho disponíveis.",
+        )
 
     # Obter ou criar cliente
     client = client_repository.find_or_create_client(db, client_name)

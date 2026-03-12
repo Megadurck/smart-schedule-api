@@ -16,7 +16,7 @@ class TestWorkingHours:
             "end_time": "17:00:00"
         }
         response = client.post("/api/v1/working-hours/", json=working_hours)
-        assert response.status_code == 200
+        assert response.status_code == 201
         data = response.json()
         assert data["weekday"] == 0
         assert data["is_active"] is True
@@ -24,16 +24,16 @@ class TestWorkingHours:
     def test_set_multiple_weekdays(self):
         """Testa definição de horários para múltiplos dias"""
         days = [
-            {"weekday": 0, "start_time": "08:00:00", "end_time": "17:00:00"},  # seg
-            {"weekday": 1, "start_time": "09:00:00", "end_time": "18:00:00"},  # ter
-            {"weekday": 2, "start_time": "08:00:00", "end_time": "17:00:00"},  # qua
-            {"weekday": 3, "start_time": "08:00:00", "end_time": "17:00:00"},  # qui
-            {"weekday": 4, "start_time": "08:00:00", "end_time": "17:00:00"},  # sex
+            {"weekday": 0, "start_time": "08:00:00", "end_time": "17:00:00"},
+            {"weekday": 1, "start_time": "09:00:00", "end_time": "18:00:00"},
+            {"weekday": 2, "start_time": "08:00:00", "end_time": "17:00:00"},
+            {"weekday": 3, "start_time": "08:00:00", "end_time": "17:00:00"},
+            {"weekday": 4, "start_time": "08:00:00", "end_time": "17:00:00"},
         ]
         
         for day in days:
             response = client.post("/api/v1/working-hours/", json=day)
-            assert response.status_code == 200
+            assert response.status_code == 201
             data = response.json()
             assert data["weekday"] == day["weekday"]
 
@@ -59,8 +59,7 @@ class TestWorkingHours:
 
     def test_update_working_hours(self):
         """Testa atualização de horário de funcionamento"""
-        # Criar inicial
-        create_response = client.post("/api/v1/working-hours/", json={
+        client.post("/api/v1/working-hours/", json={
             "weekday": 0,
             "start_time": "08:00:00",
             "end_time": "17:00:00"
@@ -72,7 +71,7 @@ class TestWorkingHours:
             "start_time": "10:00:00",
             "end_time": "19:00:00"
         })
-        assert update_response.status_code == 200
+        assert update_response.status_code == 201
 
     def test_invalid_weekday(self):
         """Testa rejeição de weekday inválido"""
@@ -177,7 +176,7 @@ class TestWorkingHours:
             "end_time": "17:30:00"
         }
         response = client.post("/api/v1/working-hours/", json=payload)
-        assert response.status_code == 200
+        assert response.status_code == 201
         data = response.json()
         assert data["weekday"] == 3
 
@@ -199,11 +198,11 @@ class TestScheduleWithWorkingHours:
         """Testa criação de agendamento dentro do horário de funcionamento"""
         agendamento = {
             "client_name": "João Silva",
-            "date": "03/03/2026",  # segunda-feira
-            "time": "10:00:00"     # dentro do horário
+            "date": "03/03/2026",
+            "time": "10:00:00"
         }
         response = client.post("/api/v1/schedule/", json=agendamento)
-        assert response.status_code == 200
+        assert response.status_code == 201
         data = response.json()
         assert "id" in data
         assert data["client"]["name"] == "João Silva"
@@ -212,138 +211,116 @@ class TestScheduleWithWorkingHours:
         """Testa rejeição de agendamento antes do horário de funcionamento"""
         agendamento = {
             "client_name": "Maria",
-            "date": "03/03/2026",  # segunda-feira
-            "time": "06:00:00"     # antes das 08:00
+            "date": "03/03/2026",
+            "time": "06:00:00"
         }
         response = client.post("/api/v1/schedule/", json=agendamento)
-        assert response.status_code == 200
-        data = response.json()
-        assert "detail" in data
-        assert "Horário fora do funcionamento" in data["detail"]
+        assert response.status_code == 422
+        assert "Horário fora do funcionamento" in response.json()["detail"]
 
     def test_create_schedule_after_working_hours(self):
         """Testa rejeição de agendamento após o horário de funcionamento"""
         agendamento = {
             "client_name": "Pedro",
-            "date": "03/03/2026",  # segunda-feira
-            "time": "18:00:00"     # depois das 17:00
+            "date": "03/03/2026",
+            "time": "18:00:00"
         }
         response = client.post("/api/v1/schedule/", json=agendamento)
-        assert response.status_code == 200
-        data = response.json()
-        assert "detail" in data
-        assert "Horário fora do funcionamento" in data["detail"]
+        assert response.status_code == 422
+        assert "Horário fora do funcionamento" in response.json()["detail"]
 
     def test_create_schedule_at_boundary(self):
         """Testa agendamento exatamente no início e fim do horário"""
-        # No início
         agendamento_inicio = {
             "client_name": "Alice",
             "date": "03/03/2026",
             "time": "08:00:00"
         }
         response = client.post("/api/v1/schedule/", json=agendamento_inicio)
-        assert response.status_code == 200
-        data = response.json()
-        assert "id" in data  # deve aceitar
+        assert response.status_code == 201
+        assert "id" in response.json()
 
-        # No fim
         agendamento_fim = {
             "client_name": "Bob",
             "date": "03/03/2026",
             "time": "17:00:00"
         }
         response = client.post("/api/v1/schedule/", json=agendamento_fim)
-        assert response.status_code == 200
-        data = response.json()
-        assert "id" in data  # deve aceitar
+        assert response.status_code == 201
+        assert "id" in response.json()
 
     def test_create_schedule_no_working_hours_defined(self):
         """Testa agendamento quando não há horários definidos para o dia"""
-        # Sabado (5) não foi configurado
         agendamento = {
             "client_name": "Carlos",
             "date": "08/03/2026",  # sábado
             "time": "10:00:00"
         }
         response = client.post("/api/v1/schedule/", json=agendamento)
-        assert response.status_code == 200
-        data = response.json()
-        assert "detail" in data
-        assert "Horário fora do funcionamento" in data["detail"]
+        assert response.status_code == 422
+        assert "Horário fora do funcionamento" in response.json()["detail"]
 
     def test_update_schedule_within_working_hours(self):
         """Testa atualização de agendamento para horário válido"""
-        # Criar agendamento inicial
         created = client.post("/api/v1/schedule/", json={
             "client_name": "Cliente",
             "date": "03/03/2026",
             "time": "10:00:00"
         }).json()
 
-        # Atualizar para outro horário válido
-        updated = {
-            "client_name": "Cliente",
-            "date": "04/03/2026",  # terça
-            "time": "14:00:00"     # horário válido
-        }
-        response = client.put(f"/api/v1/schedule/{created['id']}", json=updated)
-        assert response.status_code == 200
-        data = response.json()
-        assert data["time"] == "14:00:00"
-
-    def test_update_schedule_outside_working_hours(self):
-        """Testa rejeição de atualização para horário inválido"""
-        # Criar agendamento inicial
-        created = client.post("/api/v1/schedule/", json={
-            "client_name": "Cliente",
-            "date": "03/03/2026",
-            "time": "10:00:00"
-        }).json()
-
-        # Tentar atualizar para horário inválido
         updated = {
             "client_name": "Cliente",
             "date": "04/03/2026",
-            "time": "19:00:00"  # fora do horário
+            "time": "14:00:00"
         }
         response = client.put(f"/api/v1/schedule/{created['id']}", json=updated)
         assert response.status_code == 200
-        data = response.json()
-        assert "detail" in data
-        assert "Horário fora do funcionamento" in data["detail"]
+        assert response.json()["time"] == "14:00:00"
+
+    def test_update_schedule_outside_working_hours(self):
+        """Testa rejeição de atualização para horário inválido"""
+        created = client.post("/api/v1/schedule/", json={
+            "client_name": "Cliente",
+            "date": "03/03/2026",
+            "time": "10:00:00"
+        }).json()
+
+        updated = {
+            "client_name": "Cliente",
+            "date": "04/03/2026",
+            "time": "19:00:00"
+        }
+        response = client.put(f"/api/v1/schedule/{created['id']}", json=updated)
+        assert response.status_code == 422
+        assert "Horário fora do funcionamento" in response.json()["detail"]
 
     def test_schedule_with_json_and_working_hours(self):
         """Testa agendamento via JSON com validação de horário"""
         payload = {
             "client_name": "JSON User",
-            "date": "05/03/2026",  # quarta
-            "time": "11:30:00"     # dentro do horário
+            "date": "05/03/2026",
+            "time": "11:30:00"
         }
         response = client.post("/api/v1/schedule/", json=payload)
-        assert response.status_code == 200
-        data = response.json()
-        assert "id" in data
+        assert response.status_code == 201
+        assert "id" in response.json()
 
     def test_conflict_and_working_hours_validation_order(self):
         """Testa que conflito é detectado antes de validar horário"""
-        # Criar primeiro agendamento
         first = client.post("/api/v1/schedule/", json={
             "client_name": "Primeiro",
             "date": "03/03/2026",
             "time": "10:00:00"
         }).json()
 
-        # Tentar criar outro no mesmo horário (conflito)
         conflicting = {
             "client_name": "Conflito",
             "date": "03/03/2026",
             "time": "10:00:00"
         }
         response = client.post("/api/v1/schedule/", json=conflicting)
-        assert response.status_code == 200
-        data = response.json()
-        assert data["detail"] == "Horário já ocupado"
+        assert response.status_code == 409
+        assert response.json()["detail"] == "Horário já ocupado"
 
     def test_available_slots_calculation(self):
         """Testa cálculo de slots disponíveis para um dia"""

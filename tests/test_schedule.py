@@ -26,9 +26,8 @@ def create_schedule():
         "date": "03/03/2026",  # segundo-feira
         "time": f"10:{counter[0]:02d}:00"
     }
-    # Enviar como JSON
     response = client.post("/api/v1/schedule/", json=agendamento)
-    assert response.status_code == 200
+    assert response.status_code == 201
     data = response.json()
     assert "id" in data
     return data
@@ -55,7 +54,7 @@ def test_create_schedule_json():
     """Teste criação de agendamento via JSON"""
     payload = {"client_name": "JsonUser", "date": "03/03/2026", "time": "09:00:00"}
     response = client.post("/api/v1/schedule/", json=payload)
-    assert response.status_code == 200
+    assert response.status_code == 201
     data = response.json()
     assert data["client"]["name"] == "JsonUser"
 
@@ -92,9 +91,9 @@ def test_update_schedule():
 def test_delete_schedule():
     created = create_schedule()
     response = client.delete(f"/api/v1/schedule/{created['id']}")
-    assert response.status_code == 200
+    assert response.status_code == 204
     
-    # Verify deletion
+    # Verifica que foi deletado
     response = client.get(f"/api/v1/schedule/{created['id']}")
     assert response.status_code == 404
 
@@ -154,26 +153,25 @@ def test_update_schedule_conflict():
         "time": a["time"]
     }
     response = client.put(f"/api/v1/schedule/{b['id']}", json=payload)
-    assert response.status_code == 200
+    assert response.status_code == 409
     assert response.json()["detail"] == "Horário já ocupado"
 
     # Repetir com outro agendamento
     b2 = create_schedule()
     response = client.put(f"/api/v1/schedule/{b2['id']}", json=payload)
-    assert response.status_code == 200
+    assert response.status_code == 409
     assert response.json()["detail"] == "Horário já ocupado"
 
 
 def test_schedule_conflict():
     """Teste rejeição quando tenta agendar na mesma data/hora"""
-    # Criar primeiro agendamento
     agendamento1 = {
         "client_name": "João Conflito",
         "date": "27/02/2026",
         "time": "15:00:00"
     }
     response1 = client.post("/api/v1/schedule/", json=agendamento1)
-    assert response1.status_code == 200
+    assert response1.status_code == 201
 
     # Tentar criar segundo no mesmo horário
     agendamento2 = {
@@ -182,7 +180,7 @@ def test_schedule_conflict():
         "time": "15:00:00"
     }
     response2 = client.post("/api/v1/schedule/", json=agendamento2)
-    assert response2.status_code == 200
+    assert response2.status_code == 409
     assert response2.json()["detail"] == "Horário já ocupado"
 
     

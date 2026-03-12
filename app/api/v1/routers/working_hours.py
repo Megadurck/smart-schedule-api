@@ -4,21 +4,21 @@ from datetime import time as time_type
 from app.database.session import get_db
 from app.services import working_hours_service
 from app.enum.weekday import Weekday
-from app.schemas import WorkingHoursCreate
+from app.schemas import WorkingHoursCreate, WorkingHoursResponse
 
 
 router = APIRouter(prefix="/working-hours", tags=["Working Hours"])
 
 
 # 🔹 LISTAR TODOS OS HORÁRIOS DE FUNCIONAMENTO
-@router.get("/")
+@router.get("/", response_model=list[WorkingHoursResponse])
 def list_working_hours(db = Depends(get_db)):
     """Lista todos os horários de funcionamento configurados"""
     return working_hours_service.list_working_hours(db)
 
 
 # 🔹 DEFINIR HORÁRIO DE FUNCIONAMENTO
-@router.post("/")
+@router.post("/", response_model=WorkingHoursResponse, status_code=201)
 def set_working_hours(
     payload: WorkingHoursCreate,
     db = Depends(get_db),
