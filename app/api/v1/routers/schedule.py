@@ -1,15 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends
 
 from app.database.session import get_db
+from app.schemas import ScheduleCreate
 from app.services import schedule_service
-
-
-class ScheduleCreate(BaseModel):
-    """Schema para criar/atualizar agendamento via JSON"""
-    client_name: str
-    date: str  # Formato: DD/MM/YYYY
-    time: str  # Formato: HH:MM:SS
 
 
 router = APIRouter(prefix="/schedule", tags=["Schedule"])

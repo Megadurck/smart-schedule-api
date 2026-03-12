@@ -1,37 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
 from datetime import time as time_type
-from pydantic import BaseModel, field_validator
-from typing import Union
 
 from app.database.session import get_db
 from app.services import working_hours_service
 from app.enum.weekday import Weekday
-
-
-class WorkingHoursCreate(BaseModel):
-    """Schema para definir horários de funcionamento via JSON"""
-    weekday: Weekday  # 0 = segunda, 6 = domingo
-    start_time: str  # Formato: HH:MM:SS
-    end_time: str  # Formato: HH:MM:SS
-    slot_duration_minutes: int = 30  # Duração de cada atendimento em minutos
-    lunch_start: str | None = "12:00:00"  # Pausa de almoço início
-    lunch_end: str | None = "14:00:00"    # Pausa de almoço fim
-
-    @field_validator('weekday', mode='before')
-    @classmethod
-    def validate_weekday(cls, v: Union[str, int]) -> Weekday:
-        if isinstance(v, str):
-            try:
-                return Weekday[v.upper()]
-            except KeyError:
-                raise ValueError(f"Invalid weekday name: {v}")
-        elif isinstance(v, int):
-            try:
-                return Weekday(v)
-            except ValueError:
-                raise ValueError(f"Invalid weekday value: {v}")
-        else:
-            raise ValueError("Weekday must be int or str")
+from app.schemas import WorkingHoursCreate
 
 
 router = APIRouter(prefix="/working-hours", tags=["Working Hours"])
