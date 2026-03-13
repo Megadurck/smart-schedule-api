@@ -150,6 +150,9 @@ smart-schedule-api/
 │   │   ├── client_repository.py
 │   │   └── schedule_repository.py
 │   ├── schemas/
+│   │   ├── __init__.py
+│   │   ├── schedule.py
+│   │   └── working_hours.py
 │   ├── services/
 │   │   ├── __init__.py
 │   │   ├── schedule_service.py
@@ -228,7 +231,7 @@ uvicorn app.main:app --reload
 
 A API ficará disponível em:
 
-- http://127.0.0.1:8000
+- http://127.0.0.1:8000 (redireciona automaticamente para o Swagger)
 
 ---
 
@@ -238,6 +241,8 @@ Com a aplicação rodando, acesse:
 
 - Swagger UI: http://127.0.0.1:8000/docs
 - ReDoc: http://127.0.0.1:8000/redoc
+
+Ao abrir a raiz `/`, o browser é redirecionado automaticamente para o Swagger.
 
 ---
 
@@ -346,10 +351,10 @@ python reset_db.py
 
 Sugestões para evolução do projeto:
 
-- padronizar respostas de erro com códigos HTTP mais semânticos (ex.: conflito 409);
 - adicionar migrations com Alembic;
 - separar `requirements` de produção e desenvolvimento;
-- incluir autenticação/autorização;
+- incluir autenticação JWT e autorização por roles;
+- implementar multi-tenant (owner por usuário/empresa);
 - adicionar CI com lint, type-check e testes automatizados.
 
 ---
