@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.responses import RedirectResponse
 from contextlib import asynccontextmanager
 from app.api.v1 import api_router
 
@@ -15,5 +16,10 @@ async def lifespan(app: FastAPI):
     # Shutdown: (nada por enquanto)
 
 app = FastAPI(title="Smart Schedule API", lifespan=lifespan)
+
+# Redireciona a raiz "/" para a documentação automática do Swagger
+@app.get("/", include_in_schema=False)
+def root():
+    return RedirectResponse(url="/docs")
 
 app.include_router(api_router, prefix="/api/v1")
