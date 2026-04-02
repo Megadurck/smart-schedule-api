@@ -157,7 +157,7 @@ smart-schedule-api/
 │   ├── models/
 │   │   ├── __init__.py
 │   │   ├── client.py
-│   │   ├── shedule_model.py
+│   │   ├── schedule_model.py
 │   │   └── working_hours_model.py
 │   ├── repositories/
 │   │   ├── __init__.py

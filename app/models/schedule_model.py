@@ -3,6 +3,7 @@ from sqlalchemy.orm import relationship
 
 from app.database.session import Base
 
+
 class Schedule(Base):
     __tablename__ = "schedules"
 

@@ -5,7 +5,7 @@ from app.api.v1 import api_router
 
 from app.database.session import engine, Base, ensure_auth_columns
 from app.models.client import Client
-from app.models.shedule_model import Schedule
+from app.models.schedule_model import Schedule
 from app.models.working_hours_model import WorkingHours
 
 @asynccontextmanager

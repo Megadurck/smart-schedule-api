@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session, joinedload
 
-from app.models.shedule_model import Schedule
+from app.models.schedule_model import Schedule
 
 
 def list_schedules(db: Session) -> list[Schedule]:
