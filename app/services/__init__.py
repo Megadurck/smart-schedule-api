@@ -2,3 +2,4 @@
 # the business logic of the application lives in modules under this package
 
 from . import schedule_service
+from . import auth_service

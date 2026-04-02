@@ -7,4 +7,5 @@ class Client(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
+    password_hash = Column(String, nullable=True)
     schedules = relationship("Schedule", back_populates="client")

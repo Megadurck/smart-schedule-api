@@ -1,6 +1,10 @@
+import os
+
 import pytest
 from sqlalchemy import text
 from app.database.session import engine
+
+os.environ.setdefault("SECRET_KEY", "test-secret-key")
 
 @pytest.fixture(scope="function", autouse=True)
 def clean_database():

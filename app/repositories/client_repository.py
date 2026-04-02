@@ -22,3 +22,25 @@ def get_client(db: Session, client_id: int) -> Client | None:
 def list_clients(db: Session) -> list[Client]:
     """Lista todos os clientes."""
     return db.query(Client).all()
+
+
+def get_client_by_name(db: Session, name: str) -> Client | None:
+    """Obtém um cliente pelo nome."""
+    return db.query(Client).filter(Client.name == name).first()
+
+
+def create_client(db: Session, name: str, password_hash: str | None = None) -> Client:
+    """Cria um cliente com senha opcional."""
+    client = Client(name=name, password_hash=password_hash)
+    db.add(client)
+    db.commit()
+    db.refresh(client)
+    return client
+
+
+def set_client_password(db: Session, client: Client, password_hash: str) -> Client:
+    """Define/atualiza a senha de um cliente existente."""
+    client.password_hash = password_hash
+    db.commit()
+    db.refresh(client)
+    return client

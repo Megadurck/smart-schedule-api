@@ -5,28 +5,43 @@ from app.main import app
 client = TestClient(app)
 
 counter = [0]
+auth_counter = [0]
+
+
+def get_auth_headers():
+    auth_counter[0] += 1
+    payload = {
+        "client_name": f"auth_schedule_{auth_counter[0]}",
+        "password": "senha123",
+    }
+    response = client.post("/api/v1/auth/register", json=payload)
+    assert response.status_code == 201
+    access_token = response.json()["access_token"]
+    return {"Authorization": f"Bearer {access_token}"}
 
 
 @pytest.fixture(autouse=True)
 def setup_working_hours():
     """Setup: configurar horários de funcionamento antes de cada teste"""
+    headers = get_auth_headers()
     # Segunda a sexta: 08:00 - 18:00
     for weekday in range(5):  # 0-4 (seg a sex)
         client.post("/api/v1/working-hours/", json={
             "weekday": weekday,
             "start_time": "08:00:00",
             "end_time": "18:00:00"
-        })
+        }, headers=headers)
 
 
 def create_schedule():
     counter[0] += 1
+    headers = get_auth_headers()
     agendamento = {
         "client_name": f"João{counter[0]}",  # Nomes únicos para evitar conflitos
         "date": "03/03/2026",  # segundo-feira
         "time": f"10:{counter[0]:02d}:00"
     }
-    response = client.post("/api/v1/schedule/", json=agendamento)
+    response = client.post("/api/v1/schedule/", json=agendamento, headers=headers)
     assert response.status_code == 201
     data = response.json()
     assert "id" in data
@@ -52,8 +67,9 @@ def test_read_schedule():
 
 def test_create_schedule_json():
     """Teste criação de agendamento via JSON"""
+    headers = get_auth_headers()
     payload = {"client_name": "JsonUser", "date": "03/03/2026", "time": "09:00:00"}
-    response = client.post("/api/v1/schedule/", json=payload)
+    response = client.post("/api/v1/schedule/", json=payload, headers=headers)
     assert response.status_code == 201
     data = response.json()
     assert data["client"]["name"] == "JsonUser"
@@ -61,9 +77,10 @@ def test_create_schedule_json():
 
 def test_update_schedule_json():
     """Teste atualização de agendamento via JSON"""
+    headers = get_auth_headers()
     created = create_schedule()
     updated = {"client_name": "JsonEdit", "date": "04/03/2026", "time": "11:00:00"}
-    response = client.put(f"/api/v1/schedule/{created['id']}", json=updated)
+    response = client.put(f"/api/v1/schedule/{created['id']}", json=updated, headers=headers)
     assert response.status_code == 200
     data = response.json()
     assert data["client"]["name"] == "JsonEdit"
@@ -73,6 +90,7 @@ def test_update_schedule_json():
 
 def test_update_schedule():
     """Teste atualização de agendamento"""
+    headers = get_auth_headers()
     created = create_schedule()
     updated_data = {
         "client_name": "Maria",
@@ -80,7 +98,7 @@ def test_update_schedule():
         "time": "14:00:00"
     }
     # PUT usando JSON
-    response = client.put(f"/api/v1/schedule/{created['id']}", json=updated_data)
+    response = client.put(f"/api/v1/schedule/{created['id']}", json=updated_data, headers=headers)
     assert response.status_code == 200
     data = response.json()
     assert data["client"]["name"] == "Maria"
@@ -89,8 +107,9 @@ def test_update_schedule():
 
 
 def test_delete_schedule():
+    headers = get_auth_headers()
     created = create_schedule()
-    response = client.delete(f"/api/v1/schedule/{created['id']}")
+    response = client.delete(f"/api/v1/schedule/{created['id']}", headers=headers)
     assert response.status_code == 204
     
     # Verifica que foi deletado
@@ -99,8 +118,9 @@ def test_delete_schedule():
 
 
 def test_create_schedule_invalid_data():
+    headers = get_auth_headers()
     invalid_agendamento = {"client_name": "João"}
-    response = client.post("/api/v1/schedule/", data=invalid_agendamento)
+    response = client.post("/api/v1/schedule/", data=invalid_agendamento, headers=headers)
     assert response.status_code == 422  # Unprocessable Entity devido a campos faltantes
 
 
@@ -127,22 +147,25 @@ def test_list_schedules():
 
 def test_create_schedule_invalid_format():
     """Teste formatação inválida de data/hora"""
+    headers = get_auth_headers()
     bad = {"client_name": "Bob", "date": "2026-02-27", "time": "3pm"}
-    response = client.post("/api/v1/schedule/", json=bad)
+    response = client.post("/api/v1/schedule/", json=bad, headers=headers)
     assert response.status_code == 400
     assert "Formato de data ou hora inválido" in response.json()["detail"]
 
 
 def test_create_schedule_invalid_format_json():
     """Teste formatação inválida de data/hora via JSON"""
+    headers = get_auth_headers()
     bad = {"client_name": "Bob", "date": "2026-02-27", "time": "3pm"}
-    response = client.post("/api/v1/schedule/", json=bad)
+    response = client.post("/api/v1/schedule/", json=bad, headers=headers)
     assert response.status_code == 400
     assert "Formato de data ou hora inválido" in response.json()["detail"]
 
 
 def test_update_schedule_conflict():
     """Teste rejeição de atualização com conflito de horário"""
+    headers = get_auth_headers()
     # Cria dois agendamentos em horários diferentes
     a = create_schedule()
     b = create_schedule()
@@ -152,25 +175,26 @@ def test_update_schedule_conflict():
         "date": "03/03/2026",  # Mesmo dia de A
         "time": a["time"]
     }
-    response = client.put(f"/api/v1/schedule/{b['id']}", json=payload)
+    response = client.put(f"/api/v1/schedule/{b['id']}", json=payload, headers=headers)
     assert response.status_code == 409
     assert response.json()["detail"] == "Horário já ocupado"
 
     # Repetir com outro agendamento
     b2 = create_schedule()
-    response = client.put(f"/api/v1/schedule/{b2['id']}", json=payload)
+    response = client.put(f"/api/v1/schedule/{b2['id']}", json=payload, headers=headers)
     assert response.status_code == 409
     assert response.json()["detail"] == "Horário já ocupado"
 
 
 def test_schedule_conflict():
     """Teste rejeição quando tenta agendar na mesma data/hora"""
+    headers = get_auth_headers()
     agendamento1 = {
         "client_name": "João Conflito",
         "date": "27/02/2026",
         "time": "15:00:00"
     }
-    response1 = client.post("/api/v1/schedule/", json=agendamento1)
+    response1 = client.post("/api/v1/schedule/", json=agendamento1, headers=headers)
     assert response1.status_code == 201
 
     # Tentar criar segundo no mesmo horário
@@ -179,8 +203,23 @@ def test_schedule_conflict():
         "date": "27/02/2026",
         "time": "15:00:00"
     }
-    response2 = client.post("/api/v1/schedule/", json=agendamento2)
+    response2 = client.post("/api/v1/schedule/", json=agendamento2, headers=headers)
     assert response2.status_code == 409
     assert response2.json()["detail"] == "Horário já ocupado"
+
+
+def test_create_schedule_requires_token():
+    payload = {
+        "client_name": "SemToken",
+        "date": "03/03/2026",
+        "time": "10:00:00",
+    }
+    response = client.post("/api/v1/schedule/", json=payload)
+    assert response.status_code == 401
+
+
+def test_list_schedule_is_public():
+    response = client.get("/api/v1/schedule/")
+    assert response.status_code == 200
 
     

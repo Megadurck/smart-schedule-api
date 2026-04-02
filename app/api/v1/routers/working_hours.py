@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from datetime import time as time_type
 
+from app.core.dependencies import get_current_client
 from app.database.session import get_db
 from app.services import working_hours_service
 from app.enum.weekday import Weekday
@@ -22,6 +23,7 @@ def list_working_hours(db = Depends(get_db)):
 def set_working_hours(
     payload: WorkingHoursCreate,
     db = Depends(get_db),
+    _current_client = Depends(get_current_client),
 ):
     """Define o horário de funcionamento para um dia da semana via JSON
     

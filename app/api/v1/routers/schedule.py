@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends
 
+from app.core.dependencies import get_current_client
 from app.database.session import get_db
 from app.schemas import ScheduleCreate, ScheduleResponse
 from app.services import schedule_service
@@ -27,6 +28,7 @@ def get_schedule(id: int, db = Depends(get_db)):
 def create_schedule(
     payload: ScheduleCreate,
     db = Depends(get_db),
+    _current_client = Depends(get_current_client),
 ):
     """Cria um novo agendamento com os dados fornecidos em JSON"""
     return schedule_service.create_schedule(db, payload.client_name, payload.date, payload.time)
@@ -38,6 +40,7 @@ def put_schedule(
     id: int,
     payload: ScheduleCreate,
     db = Depends(get_db),
+    _current_client = Depends(get_current_client),
 ):
     """Atualiza um agendamento existente com novos dados"""
     return schedule_service.update_schedule(db, id, payload.client_name, payload.date, payload.time)
@@ -45,6 +48,10 @@ def put_schedule(
 
 # 🔹 DELETAR AGENDAMENTO
 @router.delete("/{id}", status_code=204)
-def delete_schedule(id: int, db = Depends(get_db)):
+def delete_schedule(
+    id: int,
+    db = Depends(get_db),
+    _current_client = Depends(get_current_client),
+):
     """Deleta um agendamento pelo ID"""
     schedule_service.delete_schedule(db, id)

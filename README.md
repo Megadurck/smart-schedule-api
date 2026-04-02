@@ -22,6 +22,7 @@
 - [Stack e Dependências](#stack-e-dependências)
 - [Como Rodar o Projeto](#como-rodar-o-projeto)
 - [Documentação Interativa](#documentação-interativa)
+- [Autenticação JWT](#autenticação-jwt)
 - [API Endpoints](#api-endpoints)
 - [Exemplos de Uso](#exemplos-de-uso)
 - [Testes](#testes)
@@ -42,6 +43,7 @@ O projeto implementa:
 - validações de conflito de horário;
 - validações de horário de expediente e intervalo de almoço;
 - cálculo de slots de atendimento disponíveis por dia.
+- autenticação JWT com access token (10 minutos) e refresh token.
 
 A persistência é feita em SQLite via SQLAlchemy ORM.
 
@@ -68,6 +70,13 @@ A persistência é feita em SQLite via SQLAlchemy ORM.
 ### 3) Saúde da API
 
 - Endpoint de health check para monitoramento.
+
+### 4) Autenticação e Segurança
+
+- Login por cliente + senha.
+- Access token JWT com expiração de 10 minutos.
+- Refresh token para renovação sem novo login.
+- Rotas de escrita protegidas por Bearer Token.
 
 ---
 
@@ -128,13 +137,18 @@ Fluxo principal:
 smart-schedule-api/
 ├── app/
 │   ├── api/
+│   │   ├── __init__.py
 │   │   └── v1/
 │   │       ├── __init__.py
 │   │       └── routers/
+│   │           ├── auth.py
 │   │           ├── health.py
 │   │           ├── schedule.py
 │   │           └── working_hours.py
 │   ├── core/
+│   │   ├── dependencies.py
+│   │   ├── security.py
+│   │   └── __init__.py
 │   ├── database/
 │   │   ├── __init__.py
 │   │   └── session.py
@@ -151,18 +165,22 @@ smart-schedule-api/
 │   │   └── schedule_repository.py
 │   ├── schemas/
 │   │   ├── __init__.py
+│   │   ├── auth.py
 │   │   ├── schedule.py
 │   │   └── working_hours.py
 │   ├── services/
 │   │   ├── __init__.py
+│   │   ├── auth_service.py
 │   │   ├── schedule_service.py
 │   │   └── working_hours_service.py
 │   ├── __init__.py
 │   └── main.py
 ├── tests/
 │   ├── conftest.py
+│   ├── test_auth.py
 │   ├── test_schedule.py
 │   └── test_working_hours.py
+├── .env.example
 ├── reset_db.py
 ├── smart_schedule.db
 ├── requirements.txt
@@ -182,6 +200,8 @@ Dependências principais:
 - Uvicorn
 - Pytest
 - HTTPX (suporte aos testes e cliente HTTP)
+- Passlib (hash de senha com pbkdf2_sha256)
+- Python-JOSE (JWT)
 
 Arquivo de dependências: `requirements.txt`
 
@@ -198,7 +218,7 @@ Arquivo de dependências: `requirements.txt`
 
 ```bash
 git clone https://github.com/Megadurck/smart-schedule-api.git
-cd smart-shedule-api
+cd smart-schedule-api
 ```
 
 ### 2) Criar e ativar ambiente virtual
@@ -223,7 +243,25 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 4) Rodar a API em desenvolvimento
+### 4) Configurar variável de ambiente
+
+`SECRET_KEY` é obrigatória para geração/validação de JWT.
+
+Você pode usar `.env.example` como base.
+
+#### Windows (PowerShell)
+
+```powershell
+$env:SECRET_KEY="troque-por-uma-chave-forte"
+```
+
+#### Linux/macOS
+
+```bash
+export SECRET_KEY="troque-por-uma-chave-forte"
+```
+
+### 5) Rodar a API em desenvolvimento
 
 ```bash
 uvicorn app.main:app --reload
@@ -246,6 +284,25 @@ Ao abrir a raiz `/`, o browser é redirecionado automaticamente para o Swagger.
 
 ---
 
+## Autenticação JWT
+
+Fluxo recomendado:
+
+1. Registrar credencial de cliente em `POST /auth/register`.
+2. Fazer login em `POST /auth/login`.
+3. Usar `access_token` no header `Authorization: Bearer <token>`.
+4. Ao expirar access token (10 min), usar `POST /auth/refresh`.
+5. Se refresh token expirar, fazer login novamente.
+
+Mensagens de expiração:
+
+- Access token expirado: orientar refresh ou novo login.
+- Refresh token expirado: orientar novo login.
+
+Obs.: requisição sem token em rota protegida retorna `401 Unauthorized`.
+
+---
+
 ## API Endpoints
 
 Base path: `/api/v1`
@@ -258,25 +315,55 @@ Base path: `/api/v1`
 
 - `GET /schedule/` -> lista todos
 - `GET /schedule/{id}` -> busca por ID
-- `POST /schedule/` -> cria
-- `PUT /schedule/{id}` -> atualiza
-- `DELETE /schedule/{id}` -> remove
+- `POST /schedule/` -> cria (protegido)
+- `PUT /schedule/{id}` -> atualiza (protegido)
+- `DELETE /schedule/{id}` -> remove (protegido)
 
 ### Working Hours
 
 - `GET /working-hours/` -> lista configurações
-- `POST /working-hours/` -> cria/atualiza configuração do dia
+- `POST /working-hours/` -> cria/atualiza configuração do dia (protegido)
 - `GET /working-hours/slots/{weekday}` -> calcula slots disponíveis
+
+### Auth
+
+- `POST /auth/register` -> cria credencial para cliente e devolve tokens
+- `POST /auth/login` -> autentica cliente e devolve tokens
+- `POST /auth/refresh` -> renova access token
+- `GET /auth/me` -> retorna cliente autenticado
 
 ---
 
 ## Exemplos de Uso
+
+### Registrar credencial
+
+```bash
+curl -X POST "http://127.0.0.1:8000/api/v1/auth/register" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "client_name": "joao",
+    "password": "senha123"
+  }'
+```
+
+### Login
+
+```bash
+curl -X POST "http://127.0.0.1:8000/api/v1/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "client_name": "joao",
+    "password": "senha123"
+  }'
+```
 
 ### Definir expediente (segunda)
 
 ```bash
 curl -X POST "http://127.0.0.1:8000/api/v1/working-hours/" \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer SEU_ACCESS_TOKEN" \
   -d '{
     "weekday": 0,
     "start_time": "08:00:00",
@@ -292,6 +379,7 @@ curl -X POST "http://127.0.0.1:8000/api/v1/working-hours/" \
 ```bash
 curl -X POST "http://127.0.0.1:8000/api/v1/schedule/" \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer SEU_ACCESS_TOKEN" \
   -d '{
     "client_name": "João Silva",
     "date": "03/03/2026",
@@ -313,6 +401,7 @@ A suíte utiliza Pytest e está organizada em:
 
 - `tests/test_schedule.py`
 - `tests/test_working_hours.py`
+- `tests/test_auth.py`
 - `tests/conftest.py`
 
 Execução dos testes:
@@ -323,7 +412,7 @@ pytest -q
 
 Resultado atual da suíte:
 
-- 39 testes passando
+- 49 testes passando
 
 ---
 
@@ -353,7 +442,8 @@ Sugestões para evolução do projeto:
 
 - adicionar migrations com Alembic;
 - separar `requirements` de produção e desenvolvimento;
-- incluir autenticação JWT e autorização por roles;
+- mover configurações para um módulo central (`app/core/config.py`);
+- incluir autorização por papéis (roles/permissões);
 - implementar multi-tenant (owner por usuário/empresa);
 - adicionar CI com lint, type-check e testes automatizados.
 
