@@ -2,9 +2,12 @@ from datetime import datetime, timedelta, timezone
 import os
 
 from fastapi import HTTPException, status
+from dotenv import load_dotenv
 from jose import ExpiredSignatureError, JWTError, jwt
 from passlib.context import CryptContext
 
+
+load_dotenv()
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 if not SECRET_KEY:
