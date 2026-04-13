@@ -2,7 +2,12 @@ from fastapi import APIRouter, Depends
 
 from app.core.dependencies import get_current_client
 from app.database.session import get_db
-from app.schemas import ScheduleCreate, ScheduleResponse
+from app.schemas import (
+    ScheduleCreate,
+    ScheduleResponse,
+    ScheduleSuggestionRequest,
+    ScheduleSuggestionResponse,
+)
 from app.services import schedule_service
 
 
@@ -55,3 +60,19 @@ def delete_schedule(
 ):
     """Deleta um agendamento pelo ID"""
     schedule_service.delete_schedule(db, id)
+
+
+@router.post("/suggestions", response_model=ScheduleSuggestionResponse)
+def suggest_schedule(
+    payload: ScheduleSuggestionRequest,
+    db = Depends(get_db),
+    _current_client = Depends(get_current_client),
+):
+    """Sugere horários recorrentes com base no histórico e disponibilidade."""
+    return schedule_service.suggest_schedules(
+        db,
+        client_name=payload.client_name,
+        start_date=payload.start_date,
+        limit=payload.limit,
+        search_days=payload.search_days,
+    )

@@ -43,6 +43,7 @@ O projeto implementa:
 - validações de conflito de horário;
 - validações de horário de expediente e intervalo de almoço;
 - cálculo de slots de atendimento disponíveis por dia.
+- sugestão de horários recorrentes com base no histórico do cliente.
 - autenticação JWT com access token (10 minutos) e refresh token.
 
 A persistência é feita em SQLite via SQLAlchemy ORM.
@@ -67,11 +68,18 @@ A persistência é feita em SQLite via SQLAlchemy ORM.
 - Listar horários configurados.
 - Calcular total de slots disponíveis em um dia.
 
-### 3) Saúde da API
+### 3) Sugestão de Horários Recorrentes
+
+- Aprende padrões do cliente com base em agendamentos anteriores.
+- Prioriza combinações recorrentes de dia da semana + horário.
+- Valida disponibilidade real (expediente ativo e sem conflito).
+- Faz fallback para próximos horários livres quando não houver histórico suficiente.
+
+### 4) Saúde da API
 
 - Endpoint de health check para monitoramento.
 
-### 4) Autenticação e Segurança
+### 5) Autenticação e Segurança
 
 - Login por cliente + senha.
 - Access token JWT com expiração de 10 minutos.
@@ -89,6 +97,14 @@ A persistência é feita em SQLite via SQLAlchemy ORM.
 - Não permite conflito de data/hora entre agendamentos.
 - Não permite agendar fora do horário de funcionamento ativo do dia.
 - Se o horário estiver no intervalo de almoço, o agendamento é rejeitado.
+
+### Sugestão de Horários
+
+- Usa histórico por cliente para aprender recorrência de `weekday + time`.
+- Ordena preferências por frequência e recência.
+- Retorna somente sugestões válidas no expediente ativo.
+- Nunca sugere horário já ocupado.
+- Se não houver histórico, retorna próximos slots livres por ordem cronológica.
 
 ### Horário de Funcionamento
 
@@ -318,6 +334,7 @@ Base path: `/api/v1`
 - `POST /schedule/` -> cria (protegido)
 - `PUT /schedule/{id}` -> atualiza (protegido)
 - `DELETE /schedule/{id}` -> remove (protegido)
+- `POST /schedule/suggestions` -> sugere horários recorrentes por cliente (protegido)
 
 ### Working Hours
 
@@ -393,6 +410,20 @@ curl -X POST "http://127.0.0.1:8000/api/v1/schedule/" \
 curl "http://127.0.0.1:8000/api/v1/working-hours/slots/0"
 ```
 
+### Sugerir horários para cliente
+
+```bash
+curl -X POST "http://127.0.0.1:8000/api/v1/schedule/suggestions" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer SEU_ACCESS_TOKEN" \
+  -d '{
+    "client_name": "João Silva",
+    "start_date": "11/03/2026",
+    "limit": 3,
+    "search_days": 30
+  }'
+```
+
 ---
 
 ## Testes
@@ -412,7 +443,7 @@ pytest -q
 
 Resultado atual da suíte:
 
-- 49 testes passando
+- 51 testes passando
 
 ---
 
@@ -445,6 +476,7 @@ Sugestões para evolução do projeto:
 - mover configurações para um módulo central (`app/core/config.py`);
 - incluir autorização por papéis (roles/permissões);
 - implementar multi-tenant (owner por usuário/empresa);
+- criar endpoint para confirmação automática de agendamento a partir de sugestão;
 - adicionar CI com lint, type-check e testes automatizados.
 
 ---

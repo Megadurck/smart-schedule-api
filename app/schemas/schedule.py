@@ -5,7 +5,7 @@ Este módulo concentra os contratos de entrada e saída da API de agendamentos.
 
 from datetime import date, time
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 # ---------------------------------------------------------------------------
@@ -49,3 +49,31 @@ class ScheduleResponse(BaseModel):
     client: ClientResponse
 
     model_config = {"from_attributes": True}
+
+
+class ScheduleSuggestionRequest(BaseModel):
+    """Payload para sugerir horários com base no histórico do cliente."""
+
+    client_name: str
+    # Data base para iniciar busca de sugestões, no formato DD/MM/YYYY.
+    start_date: str | None = None
+    # Quantidade máxima de sugestões retornadas.
+    limit: int = Field(default=3, ge=1, le=10)
+    # Janela máxima de busca de datas futuras.
+    search_days: int = Field(default=30, ge=7, le=120)
+
+
+class ScheduleSuggestionItem(BaseModel):
+    """Representa uma sugestão de data/hora para o cliente."""
+
+    date: date
+    time: time
+    score: int
+    source: str
+
+
+class ScheduleSuggestionResponse(BaseModel):
+    """Resposta com sugestões de horário para um cliente."""
+
+    client_name: str
+    suggestions: list[ScheduleSuggestionItem]

@@ -222,4 +222,55 @@ def test_list_schedule_is_public():
     response = client.get("/api/v1/schedule/")
     assert response.status_code == 200
 
+
+def test_suggest_schedule_prefers_recurring_history():
+    headers = get_auth_headers()
+    # Histórico recorrente: duas terças no mesmo horário para o mesmo cliente.
+    payload_1 = {"client_name": "Cliente Recorrente", "date": "03/03/2026", "time": "10:00:00"}
+    payload_2 = {"client_name": "Cliente Recorrente", "date": "10/03/2026", "time": "10:00:00"}
+    response_1 = client.post("/api/v1/schedule/", json=payload_1, headers=headers)
+    response_2 = client.post("/api/v1/schedule/", json=payload_2, headers=headers)
+    assert response_1.status_code == 201
+    assert response_2.status_code == 201
+
+    # Próxima terça após 11/03/2026 é 17/03/2026.
+    suggestion_request = {
+        "client_name": "Cliente Recorrente",
+        "start_date": "11/03/2026",
+        "limit": 3,
+        "search_days": 30,
+    }
+    suggestion_response = client.post(
+        "/api/v1/schedule/suggestions", json=suggestion_request, headers=headers
+    )
+
+    assert suggestion_response.status_code == 200
+    data = suggestion_response.json()
+    assert data["client_name"] == "Cliente Recorrente"
+    assert len(data["suggestions"]) >= 1
+    assert data["suggestions"][0]["time"] == "10:00:00"
+    assert data["suggestions"][0]["date"] == "2026-03-17"
+    assert data["suggestions"][0]["source"] == "history_preference"
+
+
+def test_suggest_schedule_falls_back_to_next_available_without_history():
+    headers = get_auth_headers()
+    suggestion_request = {
+        "client_name": "Cliente Novo",
+        "start_date": "02/03/2026",
+        "limit": 2,
+        "search_days": 14,
+    }
+
+    suggestion_response = client.post(
+        "/api/v1/schedule/suggestions", json=suggestion_request, headers=headers
+    )
+
+    assert suggestion_response.status_code == 200
+    data = suggestion_response.json()
+    assert data["client_name"] == "Cliente Novo"
+    assert len(data["suggestions"]) == 2
+    assert data["suggestions"][0]["source"] == "next_available"
+    assert data["suggestions"][0]["date"] == "2026-03-02"
+
     

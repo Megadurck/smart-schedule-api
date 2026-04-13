@@ -81,3 +81,13 @@ def check_conflict(
         query = query.filter(Schedule.id != exclude_id)
 
     return db.query(query.exists()).scalar()
+
+
+def list_schedules_by_client(db: Session, client_id: int) -> list[Schedule]:
+    """Lista agendamentos de um cliente, do mais recente para o mais antigo."""
+    return (
+        db.query(Schedule)
+        .filter(Schedule.client_id == client_id)
+        .order_by(Schedule.date.desc())
+        .all()
+    )
