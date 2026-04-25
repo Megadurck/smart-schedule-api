@@ -1,7 +1,7 @@
 # Smart Schedule API
 
 <p align="center">
-  API REST para gestão de agenda com validação de horário de funcionamento.
+  API REST para gestão de agenda com autenticação JWT, validação de expediente e ambiente preparado para agente de atendimento.
 </p>
 
 <p align="center">
@@ -42,9 +42,12 @@ O projeto implementa:
 - criação, atualização, leitura e remoção de agendamentos;
 - validações de conflito de horário;
 - validações de horário de expediente e intervalo de almoço;
-- cálculo de slots de atendimento disponíveis por dia.
-- sugestão de horários recorrentes com base no histórico do cliente.
-- autenticação JWT com access token (10 minutos) e refresh token.
+- cálculo de slots de atendimento disponíveis por dia;
+- sugestão de horários recorrentes com base no histórico do cliente;
+- autenticação JWT com access token (10 minutos) e refresh token;
+- ambiente configurado para receber um agente de IA para interpretar mensagens de clientes e agendar horários automaticamente.
+
+Além da API principal, o projeto já inclui um módulo de agente local em `agent/`, preparado para evoluir de um fluxo offline de testes para um fluxo integrado com provedor de IA.
 
 A persistência é feita em SQLite via SQLAlchemy ORM.
 
@@ -86,6 +89,14 @@ A persistência é feita em SQLite via SQLAlchemy ORM.
 - Refresh token para renovação sem novo login.
 - Rotas de escrita protegidas por Bearer Token.
 
+### 6) Agente de Atendimento (Preparado para IA)
+
+- Módulo local de agente em `agent/` para testes incrementais.
+- Interpretação de intenção por mensagem (consultar horários e agendar).
+- Execução das regras reais de negócio da agenda (conflito e almoço).
+- Modo offline para validação funcional sem dependência de provedor externo.
+- Ambiente pronto para plugar provedor de IA quando desejado.
+
 ---
 
 ## Regras de Negócio Implementadas
@@ -118,11 +129,11 @@ A persistência é feita em SQLite via SQLAlchemy ORM.
 ### Mapeamento de weekday
 
 - `0` = SEGUNDA
-- `1` = TERCA
+- `1` = TERÇA
 - `2` = QUARTA
 - `3` = QUINTA
 - `4` = SEXTA
-- `5` = SABADO
+- `5` = SÁBADO
 - `6` = DOMINGO
 
 ---
@@ -136,6 +147,7 @@ O projeto segue uma separação por camadas:
 - **Repositories (Dados)**: queries e persistência com SQLAlchemy.
 - **Models (ORM)**: entidades do banco de dados.
 - **Database**: configuração do engine, session e base declarativa.
+- **Agent**: camada local de interação por mensagem, preparada para receber um provedor de IA no futuro.
 
 Fluxo principal:
 
@@ -145,12 +157,25 @@ Fluxo principal:
 4. Service usa repository para acessar/persistir dados.
 5. Repository interage com models via Session.
 
+Fluxo atual do agente local:
+
+1. Usuário envia uma mensagem no terminal.
+2. O módulo `agent/agent.py` identifica a intenção da mensagem.
+3. O módulo `agent/tools.py` reutiliza as regras e serviços já existentes da API.
+4. O agente responde com horários disponíveis ou com o resultado do agendamento.
+
 ---
 
 ## Estrutura de Pastas
 
 ```text
 smart-schedule-api/
+├── agent/
+│   ├── __init__.py
+│   ├── agent.py
+│   ├── config.py
+│   ├── main.py
+│   └── tools.py
 ├── app/
 │   ├── api/
 │   │   ├── __init__.py
@@ -218,6 +243,7 @@ Dependências principais:
 - HTTPX (suporte aos testes e cliente HTTP)
 - Passlib (hash de senha com pbkdf2_sha256)
 - Python-JOSE (JWT)
+- Python-Dotenv (carregamento de variáveis de ambiente)
 
 Arquivo de dependências: `requirements.txt`
 
@@ -259,7 +285,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 4) Configurar variável de ambiente
+### 4) Configurar variáveis de ambiente
 
 `SECRET_KEY` é obrigatória para geração/validação de JWT.
 
@@ -269,13 +295,20 @@ Você pode usar `.env.example` como base.
 
 ```powershell
 $env:SECRET_KEY="troque-por-uma-chave-forte"
+$env:AGENT_PROVIDER="offline"
 ```
 
 #### Linux/macOS
 
 ```bash
 export SECRET_KEY="troque-por-uma-chave-forte"
+export AGENT_PROVIDER="offline"
 ```
+
+Variáveis opcionais do agente:
+
+- `AGENT_PROVIDER=offline` para o modo local de testes.
+- `OPENAI_API_KEY=...` para preparar integração com provedor online no futuro.
 
 ### 5) Rodar a API em desenvolvimento
 
@@ -286,6 +319,23 @@ uvicorn app.main:app --reload
 A API ficará disponível em:
 
 - http://127.0.0.1:8000 (redireciona automaticamente para o Swagger)
+
+### 6) Executar o agente local (modo offline)
+
+```bash
+python -m agent.agent
+```
+
+Exemplos de mensagens para testar no terminal:
+
+- `horarios para 03/03/2026`
+- `agendar nome Maria em 03/03/2026 09:00:00`
+- `agendar nome Joao em 03/03/2026 12:30:00`
+
+Para preparar integração com provedor de IA, configure as variáveis de ambiente:
+
+- `AGENT_PROVIDER=offline` (padrão)
+- `OPENAI_API_KEY=...` (opcional, para provider online)
 
 ---
 
@@ -424,6 +474,22 @@ curl -X POST "http://127.0.0.1:8000/api/v1/schedule/suggestions" \
   }'
 ```
 
+### Testar agente local em modo offline
+
+```bash
+python -m agent.agent
+```
+
+Exemplo de sessão:
+
+```text
+> horarios para 03/03/2026
+Horarios disponiveis: 03/03/2026 08:00:00, 03/03/2026 08:30:00, ...
+
+> agendar nome Maria em 03/03/2026 09:00:00
+Agendamento confirmado para Maria em 03/03/2026 as 09:00:00.
+```
+
 ---
 
 ## Testes
@@ -434,6 +500,12 @@ A suíte utiliza Pytest e está organizada em:
 - `tests/test_working_hours.py`
 - `tests/test_auth.py`
 - `tests/conftest.py`
+
+O módulo `agent/` também foi validado manualmente em cenários de:
+
+- listagem de horários disponíveis;
+- bloqueio de conflito no mesmo horário;
+- bloqueio de agendamento durante o intervalo de almoço.
 
 Execução dos testes:
 
@@ -476,6 +548,8 @@ Sugestões para evolução do projeto:
 - mover configurações para um módulo central (`app/core/config.py`);
 - incluir autorização por papéis (roles/permissões);
 - implementar multi-tenant (owner por usuário/empresa);
+- expor o agente local por endpoint HTTP ou webhook;
+- conectar o agente a um provedor de IA para interpretação avançada de mensagens;
 - criar endpoint para confirmação automática de agendamento a partir de sugestão;
 - adicionar CI com lint, type-check e testes automatizados.
 
