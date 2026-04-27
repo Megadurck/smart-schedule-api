@@ -11,7 +11,8 @@ client = TestClient(app)
 
 def test_register_and_login_flow():
     register_payload = {
-        "client_name": "cliente_auth",
+        "company_name": "empresa_auth",
+        "user_name": "usuario_auth",
         "password": "senha123",
     }
 
@@ -30,7 +31,8 @@ def test_register_and_login_flow():
 
 def test_register_existing_credentials_returns_conflict():
     payload = {
-        "client_name": "cliente_duplicado",
+        "company_name": "empresa_dup",
+        "user_name": "usuario_duplicado",
         "password": "senha123",
     }
 
@@ -43,21 +45,27 @@ def test_register_existing_credentials_returns_conflict():
 
 def test_login_invalid_password():
     payload = {
-        "client_name": "cliente_login",
+        "company_name": "empresa_login",
+        "user_name": "usuario_login",
         "password": "senha123",
     }
     client.post("/api/v1/auth/register", json=payload)
 
     bad_login = client.post(
         "/api/v1/auth/login",
-        json={"client_name": "cliente_login", "password": "senha_errada"},
+        json={
+            "company_name": "empresa_login",
+            "user_name": "usuario_login",
+            "password": "senha_errada",
+        },
     )
     assert bad_login.status_code == 401
 
 
 def test_refresh_and_me_endpoints():
     payload = {
-        "client_name": "cliente_me",
+        "company_name": "empresa_me",
+        "user_name": "usuario_me",
         "password": "senha123",
     }
     register_response = client.post("/api/v1/auth/register", json=payload)
@@ -69,7 +77,8 @@ def test_refresh_and_me_endpoints():
     )
     assert me_response.status_code == 200
     me_data = me_response.json()
-    assert me_data["name"] == "cliente_me"
+    assert me_data["name"] == "usuario_me"
+    assert "company_id" in me_data
 
     refresh_response = client.post(
         "/api/v1/auth/refresh",
@@ -82,14 +91,15 @@ def test_refresh_and_me_endpoints():
 
 def test_expired_access_token_message():
     payload = {
-        "client_name": "cliente_expirado",
+        "company_name": "empresa_expirada",
+        "user_name": "usuario_expirado",
         "password": "senha123",
     }
     register_response = client.post("/api/v1/auth/register", json=payload)
     assert register_response.status_code == 201
 
     expired_access = security._create_token(
-        subject="cliente_expirado",
+        subject="1",
         token_type="access",
         expires_delta=timedelta(seconds=-1),
     )
@@ -105,14 +115,15 @@ def test_expired_access_token_message():
 
 def test_expired_refresh_token_message():
     payload = {
-        "client_name": "cliente_refresh_expirado",
+        "company_name": "empresa_refresh_expirada",
+        "user_name": "usuario_refresh_expirado",
         "password": "senha123",
     }
     register_response = client.post("/api/v1/auth/register", json=payload)
     assert register_response.status_code == 201
 
     expired_refresh = security._create_token(
-        subject="cliente_refresh_expirado",
+        subject="1",
         token_type="refresh",
         expires_delta=timedelta(seconds=-1),
     )
@@ -124,3 +135,22 @@ def test_expired_refresh_token_message():
 
     assert response.status_code == 401
     assert "Faça login novamente" in response.json()["detail"]
+
+
+def test_same_user_name_in_different_companies_is_allowed():
+    payload_a = {
+        "company_name": "empresa_a",
+        "user_name": "usuario_global",
+        "password": "senha123",
+    }
+    payload_b = {
+        "company_name": "empresa_b",
+        "user_name": "usuario_global",
+        "password": "senha123",
+    }
+
+    response_a = client.post("/api/v1/auth/register", json=payload_a)
+    response_b = client.post("/api/v1/auth/register", json=payload_b)
+
+    assert response_a.status_code == 201
+    assert response_b.status_code == 201

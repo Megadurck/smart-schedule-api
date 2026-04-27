@@ -2,12 +2,14 @@ from pydantic import BaseModel, Field
 
 
 class AuthRegister(BaseModel):
-    client_name: str
+    company_name: str
+    user_name: str
     password: str = Field(min_length=6)
 
 
 class AuthLogin(BaseModel):
-    client_name: str
+    company_name: str
+    user_name: str
     password: str = Field(min_length=6)
 
 

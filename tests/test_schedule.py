@@ -1,17 +1,19 @@
 import pytest
 from fastapi.testclient import TestClient
+
 from app.main import app
 
-client = TestClient(app)
 
+client = TestClient(app)
 counter = [0]
 auth_counter = [0]
 
 
-def get_auth_headers():
+def get_auth_headers(company_name: str = "empresa_schedule"):
     auth_counter[0] += 1
     payload = {
-        "client_name": f"auth_schedule_{auth_counter[0]}",
+        "company_name": company_name,
+        "user_name": f"auth_schedule_{auth_counter[0]}",
         "password": "senha123",
     }
     response = client.post("/api/v1/auth/register", json=payload)
@@ -22,195 +24,187 @@ def get_auth_headers():
 
 @pytest.fixture(autouse=True)
 def setup_working_hours():
-    """Setup: configurar horários de funcionamento antes de cada teste"""
-    headers = get_auth_headers()
-    # Segunda a sexta: 08:00 - 18:00
-    for weekday in range(5):  # 0-4 (seg a sex)
-        client.post("/api/v1/working-hours/", json={
-            "weekday": weekday,
-            "start_time": "08:00:00",
-            "end_time": "18:00:00"
-        }, headers=headers)
+    headers = get_auth_headers("empresa_schedule")
+    for weekday in range(5):
+        response = client.post(
+            "/api/v1/working-hours/",
+            json={
+                "weekday": weekday,
+                "start_time": "08:00:00",
+                "end_time": "18:00:00",
+            },
+            headers=headers,
+        )
+        assert response.status_code == 201
 
 
-def create_schedule():
+def create_schedule(headers=None):
     counter[0] += 1
-    headers = get_auth_headers()
-    agendamento = {
-        "client_name": f"João{counter[0]}",  # Nomes únicos para evitar conflitos
-        "date": "03/03/2026",  # segundo-feira
-        "time": f"10:{counter[0]:02d}:00"
+    headers = headers or get_auth_headers("empresa_schedule")
+    minute = counter[0] % 60
+    payload = {
+        "customer_name": f"Cliente{counter[0]}",
+        "date": "03/03/2026",
+        "time": f"10:{minute:02d}:00",
     }
-    response = client.post("/api/v1/schedule/", json=agendamento, headers=headers)
+    response = client.post("/api/v1/schedule/", json=payload, headers=headers)
     assert response.status_code == 201
-    data = response.json()
-    assert "id" in data
-    return data
+    return response.json()
 
 
 def test_create_schedule():
     data = create_schedule()
-    assert data['id'] is not None
-    assert data['client']['name'].startswith("João")  # Verifica se o cliente foi criado
+    assert data["id"] is not None
+    assert data["customer"]["name"].startswith("Cliente")
 
 
 def test_read_schedule():
-    created = create_schedule()
-    response = client.get(f"/api/v1/schedule/{created['id']}")
+    headers = get_auth_headers("empresa_schedule")
+    created = create_schedule(headers=headers)
+    response = client.get(f"/api/v1/schedule/{created['id']}", headers=headers)
     assert response.status_code == 200
     data = response.json()
     assert data["id"] == created["id"]
-    assert data["client"]["name"].startswith("João")
-    assert data["date"] == "2026-03-03"  # Data retornada em ISO
+    assert data["customer"]["name"].startswith("Cliente")
+    assert data["date"] == "2026-03-03"
     assert data["time"].startswith("10:")
 
 
 def test_create_schedule_json():
-    """Teste criação de agendamento via JSON"""
-    headers = get_auth_headers()
-    payload = {"client_name": "JsonUser", "date": "03/03/2026", "time": "09:00:00"}
+    headers = get_auth_headers("empresa_schedule")
+    payload = {"customer_name": "JsonUser", "date": "03/03/2026", "time": "09:00:00"}
     response = client.post("/api/v1/schedule/", json=payload, headers=headers)
     assert response.status_code == 201
     data = response.json()
-    assert data["client"]["name"] == "JsonUser"
+    assert data["customer"]["name"] == "JsonUser"
 
 
 def test_update_schedule_json():
-    """Teste atualização de agendamento via JSON"""
-    headers = get_auth_headers()
-    created = create_schedule()
-    updated = {"client_name": "JsonEdit", "date": "04/03/2026", "time": "11:00:00"}
+    headers = get_auth_headers("empresa_schedule")
+    created = create_schedule(headers=headers)
+    updated = {"customer_name": "JsonEdit", "date": "04/03/2026", "time": "11:00:00"}
     response = client.put(f"/api/v1/schedule/{created['id']}", json=updated, headers=headers)
     assert response.status_code == 200
     data = response.json()
-    assert data["client"]["name"] == "JsonEdit"
+    assert data["customer"]["name"] == "JsonEdit"
     assert data["date"] == "2026-03-04"
     assert data["time"] == "11:00:00"
 
 
 def test_update_schedule():
-    """Teste atualização de agendamento"""
-    headers = get_auth_headers()
-    created = create_schedule()
+    headers = get_auth_headers("empresa_schedule")
+    created = create_schedule(headers=headers)
     updated_data = {
-        "client_name": "Maria",
+        "customer_name": "Maria",
         "date": "04/03/2026",
-        "time": "14:00:00"
+        "time": "14:00:00",
     }
-    # PUT usando JSON
     response = client.put(f"/api/v1/schedule/{created['id']}", json=updated_data, headers=headers)
     assert response.status_code == 200
     data = response.json()
-    assert data["client"]["name"] == "Maria"
+    assert data["customer"]["name"] == "Maria"
     assert data["date"] == "2026-03-04"
     assert data["time"] == "14:00:00"
 
 
 def test_delete_schedule():
-    headers = get_auth_headers()
-    created = create_schedule()
+    headers = get_auth_headers("empresa_schedule")
+    created = create_schedule(headers=headers)
     response = client.delete(f"/api/v1/schedule/{created['id']}", headers=headers)
     assert response.status_code == 204
-    
-    # Verifica que foi deletado
-    response = client.get(f"/api/v1/schedule/{created['id']}")
+
+    response = client.get(f"/api/v1/schedule/{created['id']}", headers=headers)
     assert response.status_code == 404
 
 
 def test_create_schedule_invalid_data():
-    headers = get_auth_headers()
-    invalid_agendamento = {"client_name": "João"}
-    response = client.post("/api/v1/schedule/", data=invalid_agendamento, headers=headers)
-    assert response.status_code == 422  # Unprocessable Entity devido a campos faltantes
+    headers = get_auth_headers("empresa_schedule")
+    invalid_payload = {"customer_name": "Joao"}
+    response = client.post("/api/v1/schedule/", data=invalid_payload, headers=headers)
+    assert response.status_code == 422
 
 
 def test_read_nonexistent_schedule():
-    response = client.get("/api/v1/schedule/99999")
+    headers = get_auth_headers("empresa_schedule")
+    response = client.get("/api/v1/schedule/99999", headers=headers)
     assert response.status_code == 404
 
 
 def test_list_schedules():
-    # Criar alguns agendamentos
-    create_schedule()
-    create_schedule()
-    response = client.get("/api/v1/schedule/")
+    headers = get_auth_headers("empresa_schedule")
+    create_schedule(headers=headers)
+    create_schedule(headers=headers)
+    response = client.get("/api/v1/schedule/", headers=headers)
     assert response.status_code == 200
     data = response.json()
     assert isinstance(data, list)
-    assert len(data) >= 2  # Pelo menos os criados
+    assert len(data) >= 2
     for item in data:
         assert "id" in item
-        assert "client" in item
+        assert "customer" in item
         assert "date" in item
         assert "time" in item
 
 
 def test_create_schedule_invalid_format():
-    """Teste formatação inválida de data/hora"""
-    headers = get_auth_headers()
-    bad = {"client_name": "Bob", "date": "2026-02-27", "time": "3pm"}
+    headers = get_auth_headers("empresa_schedule")
+    bad = {"customer_name": "Bob", "date": "2026-02-27", "time": "3pm"}
     response = client.post("/api/v1/schedule/", json=bad, headers=headers)
     assert response.status_code == 400
     assert "Formato de data ou hora inválido" in response.json()["detail"]
 
 
 def test_create_schedule_invalid_format_json():
-    """Teste formatação inválida de data/hora via JSON"""
-    headers = get_auth_headers()
-    bad = {"client_name": "Bob", "date": "2026-02-27", "time": "3pm"}
+    headers = get_auth_headers("empresa_schedule")
+    bad = {"customer_name": "Bob", "date": "2026-02-27", "time": "3pm"}
     response = client.post("/api/v1/schedule/", json=bad, headers=headers)
     assert response.status_code == 400
     assert "Formato de data ou hora inválido" in response.json()["detail"]
 
 
 def test_update_schedule_conflict():
-    """Teste rejeição de atualização com conflito de horário"""
-    headers = get_auth_headers()
-    # Cria dois agendamentos em horários diferentes
-    a = create_schedule()
-    b = create_schedule()
-    # Tenta atualizar B para o horário de A
+    headers = get_auth_headers("empresa_schedule")
+    a = create_schedule(headers=headers)
+    b = create_schedule(headers=headers)
+
     payload = {
-        "client_name": "Outro",
-        "date": "03/03/2026",  # Mesmo dia de A
-        "time": a["time"]
+        "customer_name": "Outro",
+        "date": "03/03/2026",
+        "time": a["time"],
     }
     response = client.put(f"/api/v1/schedule/{b['id']}", json=payload, headers=headers)
     assert response.status_code == 409
     assert response.json()["detail"] == "Horário já ocupado"
 
-    # Repetir com outro agendamento
-    b2 = create_schedule()
+    b2 = create_schedule(headers=headers)
     response = client.put(f"/api/v1/schedule/{b2['id']}", json=payload, headers=headers)
     assert response.status_code == 409
     assert response.json()["detail"] == "Horário já ocupado"
 
 
 def test_schedule_conflict():
-    """Teste rejeição quando tenta agendar na mesma data/hora"""
-    headers = get_auth_headers()
-    agendamento1 = {
-        "client_name": "João Conflito",
+    headers = get_auth_headers("empresa_schedule")
+    first = {
+        "customer_name": "Joao Conflito",
         "date": "27/02/2026",
-        "time": "15:00:00"
+        "time": "15:00:00",
     }
-    response1 = client.post("/api/v1/schedule/", json=agendamento1, headers=headers)
+    response1 = client.post("/api/v1/schedule/", json=first, headers=headers)
     assert response1.status_code == 201
 
-    # Tentar criar segundo no mesmo horário
-    agendamento2 = {
-        "client_name": "Maria Conflito",
+    second = {
+        "customer_name": "Maria Conflito",
         "date": "27/02/2026",
-        "time": "15:00:00"
+        "time": "15:00:00",
     }
-    response2 = client.post("/api/v1/schedule/", json=agendamento2, headers=headers)
+    response2 = client.post("/api/v1/schedule/", json=second, headers=headers)
     assert response2.status_code == 409
     assert response2.json()["detail"] == "Horário já ocupado"
 
 
 def test_create_schedule_requires_token():
     payload = {
-        "client_name": "SemToken",
+        "customer_name": "SemToken",
         "date": "03/03/2026",
         "time": "10:00:00",
     }
@@ -218,24 +212,22 @@ def test_create_schedule_requires_token():
     assert response.status_code == 401
 
 
-def test_list_schedule_is_public():
+def test_list_schedule_requires_token():
     response = client.get("/api/v1/schedule/")
-    assert response.status_code == 200
+    assert response.status_code == 401
 
 
 def test_suggest_schedule_prefers_recurring_history():
-    headers = get_auth_headers()
-    # Histórico recorrente: duas terças no mesmo horário para o mesmo cliente.
-    payload_1 = {"client_name": "Cliente Recorrente", "date": "03/03/2026", "time": "10:00:00"}
-    payload_2 = {"client_name": "Cliente Recorrente", "date": "10/03/2026", "time": "10:00:00"}
+    headers = get_auth_headers("empresa_schedule")
+    payload_1 = {"customer_name": "Cliente Recorrente", "date": "03/03/2026", "time": "10:00:00"}
+    payload_2 = {"customer_name": "Cliente Recorrente", "date": "10/03/2026", "time": "10:00:00"}
     response_1 = client.post("/api/v1/schedule/", json=payload_1, headers=headers)
     response_2 = client.post("/api/v1/schedule/", json=payload_2, headers=headers)
     assert response_1.status_code == 201
     assert response_2.status_code == 201
 
-    # Próxima terça após 11/03/2026 é 17/03/2026.
     suggestion_request = {
-        "client_name": "Cliente Recorrente",
+        "customer_name": "Cliente Recorrente",
         "start_date": "11/03/2026",
         "limit": 3,
         "search_days": 30,
@@ -246,7 +238,7 @@ def test_suggest_schedule_prefers_recurring_history():
 
     assert suggestion_response.status_code == 200
     data = suggestion_response.json()
-    assert data["client_name"] == "Cliente Recorrente"
+    assert data["customer_name"] == "Cliente Recorrente"
     assert len(data["suggestions"]) >= 1
     assert data["suggestions"][0]["time"] == "10:00:00"
     assert data["suggestions"][0]["date"] == "2026-03-17"
@@ -254,9 +246,9 @@ def test_suggest_schedule_prefers_recurring_history():
 
 
 def test_suggest_schedule_falls_back_to_next_available_without_history():
-    headers = get_auth_headers()
+    headers = get_auth_headers("empresa_schedule")
     suggestion_request = {
-        "client_name": "Cliente Novo",
+        "customer_name": "Cliente Novo",
         "start_date": "02/03/2026",
         "limit": 2,
         "search_days": 14,
@@ -268,9 +260,41 @@ def test_suggest_schedule_falls_back_to_next_available_without_history():
 
     assert suggestion_response.status_code == 200
     data = suggestion_response.json()
-    assert data["client_name"] == "Cliente Novo"
+    assert data["customer_name"] == "Cliente Novo"
     assert len(data["suggestions"]) == 2
     assert data["suggestions"][0]["source"] == "next_available"
     assert data["suggestions"][0]["date"] == "2026-03-02"
 
-    
+
+def test_schedule_isolated_between_companies():
+    headers_a = get_auth_headers("empresa_a")
+    headers_b = get_auth_headers("empresa_b")
+
+    for headers in (headers_a, headers_b):
+        response = client.post(
+            "/api/v1/working-hours/",
+            json={
+                "weekday": 4,
+                "start_time": "08:00:00",
+                "end_time": "18:00:00",
+            },
+            headers=headers,
+        )
+        assert response.status_code == 201
+
+    first = {
+        "customer_name": "Cliente A",
+        "date": "27/02/2026",
+        "time": "16:00:00",
+    }
+    second = {
+        "customer_name": "Cliente B",
+        "date": "27/02/2026",
+        "time": "16:00:00",
+    }
+
+    response_a = client.post("/api/v1/schedule/", json=first, headers=headers_a)
+    response_b = client.post("/api/v1/schedule/", json=second, headers=headers_b)
+
+    assert response_a.status_code == 201
+    assert response_b.status_code == 201

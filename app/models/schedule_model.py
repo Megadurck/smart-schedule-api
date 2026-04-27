@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Date, Time
+from sqlalchemy import Column, Integer, ForeignKey, Date, Time
 from sqlalchemy.orm import relationship
 
 from app.database.session import Base
@@ -9,9 +9,13 @@ class Schedule(Base):
 
     id = Column(Integer, primary_key=True, index=True)
 
-    client_id = Column(Integer, ForeignKey("clients.id"), nullable=False)
+    customer_id = Column(Integer, ForeignKey("customers.id"), nullable=False)
+    company_id = Column(Integer, ForeignKey("companies.id"), nullable=False, index=True)
+    professional_id = Column(Integer, ForeignKey("professionals.id"), nullable=True, index=True)
 
     date = Column(Date, nullable=False)
     time = Column(Time, nullable=False)
 
-    client = relationship("Client", back_populates="schedules")
+    customer = relationship("Customer", back_populates="schedules")
+    company = relationship("Company", back_populates="schedules")
+    professional = relationship("Professional", back_populates="schedules")

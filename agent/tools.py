@@ -1,16 +1,20 @@
 from datetime import date as date_type, datetime, time, timedelta
 
+from agent.config import AGENT_COMPANY_NAME
 from app.database.session import Base, SessionLocal, engine
-from app.models.client import Client
-from app.models.schedule_model import Schedule
 from app.models.working_hours_model import WorkingHours
-from app.repositories import schedule_repository
+from app.repositories import company_repository, schedule_repository
 from app.services import schedule_service
 
 
 def get_db_session():
 	Base.metadata.create_all(bind=engine)
 	return SessionLocal()
+
+
+def get_agent_company_id(db) -> int:
+	company = company_repository.find_or_create_company(db, AGENT_COMPANY_NAME)
+	return company.id
 
 
 def parse_date(value: str) -> date_type:
@@ -31,11 +35,12 @@ def list_available_slots(
 ) -> list[dict]:
 	base_date = parse_date(start_date) if start_date else datetime.now().date()
 	max_date = base_date + timedelta(days=max(days_ahead, 1))
+	company_id = get_agent_company_id(db)
 
 	working_hours_map = {
 		item.weekday: item
 		for item in db.query(WorkingHours)
-		.filter(WorkingHours.is_active == True)
+		.filter(WorkingHours.company_id == company_id, WorkingHours.is_active == True)
 		.all()
 	}
 
@@ -45,7 +50,7 @@ def list_available_slots(
 		day_working_hours = working_hours_map.get(current_date.weekday())
 		if day_working_hours:
 			for slot in _build_daily_slots(day_working_hours):
-				if not schedule_repository.check_conflict(db, current_date, slot):
+				if not schedule_repository.check_conflict(db, company_id, current_date, slot):
 					slots.append({"date": current_date, "time": slot})
 					if len(slots) >= limit:
 						break
@@ -55,10 +60,12 @@ def list_available_slots(
 	return slots
 
 
-def create_schedule_offline(db, client_name: str, schedule_date: str, schedule_time: str):
+def create_schedule_offline(db, customer_name: str, schedule_date: str, schedule_time: str):
+	company_id = get_agent_company_id(db)
 	return schedule_service.create_schedule(
 		db,
-		client_name=client_name,
+		company_id=company_id,
+		customer_name=customer_name,
 		date_str=schedule_date,
 		time_str=schedule_time,
 	)

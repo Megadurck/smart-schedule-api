@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from datetime import time as time_type
 
-from app.core.dependencies import get_current_client
+from app.core.dependencies import get_current_user
 from app.database.session import get_db
 from app.services import working_hours_service
 from app.enum.weekday import Weekday
@@ -13,9 +13,12 @@ router = APIRouter(prefix="/working-hours", tags=["Working Hours"])
 
 # 🔹 LISTAR TODOS OS HORÁRIOS DE FUNCIONAMENTO
 @router.get("/", response_model=list[WorkingHoursResponse])
-def list_working_hours(db = Depends(get_db)):
+def list_working_hours(
+    db = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
     """Lista todos os horários de funcionamento configurados"""
-    return working_hours_service.list_working_hours(db)
+    return working_hours_service.list_working_hours(db, current_user.company_id)
 
 
 # 🔹 DEFINIR HORÁRIO DE FUNCIONAMENTO
@@ -23,7 +26,7 @@ def list_working_hours(db = Depends(get_db)):
 def set_working_hours(
     payload: WorkingHoursCreate,
     db = Depends(get_db),
-    _current_client = Depends(get_current_client),
+    current_user = Depends(get_current_user),
 ):
     """Define o horário de funcionamento para um dia da semana via JSON
     
@@ -37,6 +40,7 @@ def set_working_hours(
     """
     return _validate_and_set_working_hours(
         db, 
+        current_user.company_id,
         payload.weekday, 
         payload.start_time, 
         payload.end_time,
@@ -48,7 +52,11 @@ def set_working_hours(
 
 # 🔹 CALCULAR SLOTS DISPONÍVEIS
 @router.get("/slots/{weekday}")
-def get_available_slots(weekday: Weekday, db = Depends(get_db)):
+def get_available_slots(
+    weekday: Weekday,
+    db = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
     """Calcula quantos slots de atendimento estão disponíveis para um dia
     
     Exemplo de resposta:
@@ -60,11 +68,19 @@ def get_available_slots(weekday: Weekday, db = Depends(get_db)):
         "slot_duration_minutes": 30
     }
     """
-    return working_hours_service.calculate_available_slots(db, weekday.value)
+    return working_hours_service.calculate_available_slots(
+        db,
+        current_user.company_id,
+        weekday.value,
+    )
 
 
 def _validate_and_set_working_hours(
-    db, weekday: Weekday, start_time: str, end_time: str, 
+    db,
+    company_id: int,
+    weekday: Weekday,
+    start_time: str,
+    end_time: str,
     slot_duration_minutes: int = 30, lunch_start: str | None = "12:00:00", 
     lunch_end: str | None = "14:00:00"
 ):
@@ -123,5 +139,12 @@ def _validate_and_set_working_hours(
         )
     
     return working_hours_service.set_working_hours(
-        db, weekday.value, start, end, slot_duration_minutes, lunch_start_time, lunch_end_time
+        db,
+        company_id,
+        weekday.value,
+        start,
+        end,
+        slot_duration_minutes,
+        lunch_start_time,
+        lunch_end_time,
     )

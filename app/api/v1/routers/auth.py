@@ -18,12 +18,22 @@ security = HTTPBearer()
 
 @router.post("/register", response_model=TokenResponse, status_code=201)
 def register(payload: AuthRegister, db=Depends(get_db)):
-    return auth_service.register_client_credentials(db, payload.client_name, payload.password)
+    return auth_service.register_user_credentials(
+        db,
+        payload.company_name,
+        payload.user_name,
+        payload.password,
+    )
 
 
 @router.post("/login", response_model=TokenResponse)
 def login(payload: AuthLogin, db=Depends(get_db)):
-    return auth_service.login(db, payload.client_name, payload.password)
+    return auth_service.login(
+        db,
+        payload.company_name,
+        payload.user_name,
+        payload.password,
+    )
 
 
 @router.post("/refresh", response_model=AccessTokenResponse)
@@ -33,5 +43,5 @@ def refresh(payload: RefreshTokenRequest):
 
 @router.get("/me")
 def me(credentials: HTTPAuthorizationCredentials = Depends(security), db=Depends(get_db)):
-    client = auth_service.get_client_from_access_token(db, credentials.credentials)
-    return {"id": client.id, "name": client.name}
+    user = auth_service.get_user_from_access_token(db, credentials.credentials)
+    return {"id": user.id, "name": user.name, "company_id": user.company_id}

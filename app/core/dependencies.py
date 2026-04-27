@@ -8,8 +8,8 @@ from app.services import auth_service
 security = HTTPBearer()
 
 
-def get_current_client(
+def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db=Depends(get_db),
 ):
-    return auth_service.get_client_from_access_token(db, credentials.credentials)
+    return auth_service.get_user_from_access_token(db, credentials.credentials)

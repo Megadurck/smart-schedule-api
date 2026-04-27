@@ -1,4 +1,4 @@
-from datetime import time, timedelta
+from datetime import time
 from sqlalchemy.orm import Session
 from app.models.working_hours_model import WorkingHours
 from app.enum.weekday import Weekday
@@ -6,6 +6,7 @@ from app.enum.weekday import Weekday
 
 def set_working_hours(
     db: Session,
+    company_id: int,
     weekday: Weekday | int,
     start_time: time,
     end_time: time,
@@ -26,7 +27,7 @@ def set_working_hours(
     
     working_hours = (
         db.query(WorkingHours)
-        .filter(WorkingHours.weekday == weekday)
+        .filter(WorkingHours.company_id == company_id, WorkingHours.weekday == weekday)
         .first()
     )
 
@@ -39,6 +40,7 @@ def set_working_hours(
         working_hours.is_active = True
     else:
         working_hours = WorkingHours(
+            company_id=company_id,
             weekday= int(weekday),
             start_time=start_time,
             end_time=end_time,
@@ -55,16 +57,18 @@ def set_working_hours(
     return working_hours
 
 
-def list_working_hours(db: Session):
+def list_working_hours(db: Session, company_id: int):
 
     return (
         db.query(WorkingHours)
+        .filter(WorkingHours.company_id == company_id)
         .order_by(WorkingHours.weekday)
         .all()
     )
 
 def is_within_working_hours(
     db: Session,
+    company_id: int,
     weekday: Weekday | int,
     schedule_time: time
 ) -> bool:
@@ -72,6 +76,7 @@ def is_within_working_hours(
     working_hours = (
         db.query(WorkingHours)
         .filter(
+            WorkingHours.company_id == company_id,
             WorkingHours.weekday == weekday,
             WorkingHours.is_active == True
         )
@@ -89,11 +94,12 @@ def is_within_working_hours(
     return working_hours.start_time <= schedule_time <= working_hours.end_time
 
 
-def calculate_available_slots(db: Session, weekday: int) -> dict:
+def calculate_available_slots(db: Session, company_id: int, weekday: int) -> dict:
     """Calcula quantos slots de atendimento estão disponíveis no dia"""
     working_hours = (
         db.query(WorkingHours)
         .filter(
+            WorkingHours.company_id == company_id,
             WorkingHours.weekday == weekday,
             WorkingHours.is_active == True
         )

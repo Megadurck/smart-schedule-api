@@ -9,7 +9,10 @@ def reset_database():
         
         # Drop all tables
         conn.execute(text("DROP TABLE IF EXISTS schedules"))
-        conn.execute(text("DROP TABLE IF EXISTS clients"))
+        conn.execute(text("DROP TABLE IF EXISTS customers"))
+        conn.execute(text("DROP TABLE IF EXISTS professionals"))
+        conn.execute(text("DROP TABLE IF EXISTS users"))
+        conn.execute(text("DROP TABLE IF EXISTS companies"))
         conn.execute(text("DROP TABLE IF EXISTS working_hours"))
         
         conn.execute(text("PRAGMA foreign_keys = ON"))

@@ -1,375 +1,337 @@
 # Smart Schedule API
 
 <p align="center">
-  API REST para gestão de agenda com autenticação JWT, validação de expediente e ambiente preparado para agente de atendimento.
+  API REST multi-tenant para gestão de agendas com autenticação JWT, controle de expediente, clientes finais, profissionais e agente local preparado para canais conversacionais.
 </p>
 
 <p align="center">
   <img alt="Python" src="https://img.shields.io/badge/python-3.13+-blue.svg">
   <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-0.129.2-009688.svg">
   <img alt="SQLAlchemy" src="https://img.shields.io/badge/SQLAlchemy-2.0.47-D71F00.svg">
-  <img alt="Pytest" src="https://img.shields.io/badge/tests-pytest%209.0.2-0A9EDC.svg">
+  <img alt="Pytest" src="https://img.shields.io/badge/tests-59%20passed-0A9EDC.svg">
   <img alt="License" src="https://img.shields.io/badge/license-MIT-green.svg">
 </p>
 
-## Sumário
-
-- [Visão Geral](#visão-geral)
-- [Principais Funcionalidades](#principais-funcionalidades)
-- [Regras de Negócio Implementadas](#regras-de-negócio-implementadas)
-- [Arquitetura](#arquitetura)
-- [Estrutura de Pastas](#estrutura-de-pastas)
-- [Stack e Dependências](#stack-e-dependências)
-- [Como Rodar o Projeto](#como-rodar-o-projeto)
-- [Documentação Interativa](#documentação-interativa)
-- [Autenticação JWT](#autenticação-jwt)
-- [API Endpoints](#api-endpoints)
-- [Exemplos de Uso](#exemplos-de-uso)
-- [Testes](#testes)
-- [Banco de Dados](#banco-de-dados)
-- [Roadmap de Melhorias](#roadmap-de-melhorias)
-- [Licença](#licença)
-
----
-
 ## Visão Geral
 
-O Smart Schedule API é uma API REST construída com FastAPI para controle de agendamentos.
+O Smart Schedule API evoluiu de uma agenda simples para uma base SaaS multi-tenant. Hoje cada empresa possui seu próprio conjunto de usuários internos, clientes finais, profissionais, horários de trabalho e agendamentos, todos isolados por `company_id`.
 
-O projeto implementa:
+O sistema foi modelado para um fluxo onde:
 
-- cadastro e consulta de horários de funcionamento por dia da semana;
-- criação, atualização, leitura e remoção de agendamentos;
-- validações de conflito de horário;
-- validações de horário de expediente e intervalo de almoço;
-- cálculo de slots de atendimento disponíveis por dia;
-- sugestão de horários recorrentes com base no histórico do cliente;
-- autenticação JWT com access token (10 minutos) e refresh token;
-- ambiente configurado para receber um agente de IA para interpretar mensagens de clientes e agendar horários automaticamente.
+- a empresa configura expediente e slots de atendimento;
+- usuários internos autenticados operam a conta da empresa;
+- clientes finais são cadastrados e vinculados aos agendamentos;
+- profissionais podem ser associados opcionalmente a cada atendimento;
+- um agente local reutiliza as mesmas regras da API para consultar disponibilidade e criar agendamentos.
 
-Além da API principal, o projeto já inclui um módulo de agente local em `agent/`, preparado para evoluir de um fluxo offline de testes para um fluxo integrado com provedor de IA.
+A persistência é feita com SQLite e SQLAlchemy ORM. A aplicação expõe uma API FastAPI com documentação automática em Swagger e já possui suíte de testes cobrindo autenticação, agendamentos, expediente, customers e professionals.
 
-A persistência é feita em SQLite via SQLAlchemy ORM.
+## O Que Mudou
 
----
+A principal reformulação do projeto foi a troca do antigo modelo centrado em `client` por um domínio separado por responsabilidade:
+
+- `Company`: tenant raiz da plataforma.
+- `User`: usuário interno autenticado da empresa.
+- `Customer`: cliente final atendido pela empresa.
+- `Professional`: prestador, atendente ou profissional opcional ligado ao atendimento.
+- `Schedule`: agendamento isolado por empresa, cliente final e profissional opcional.
+- `WorkingHours`: expediente da empresa por dia da semana.
+
+Além disso:
+
+- o JWT agora carrega `company_id` e `sub = user.id`;
+- autenticação passou a usar `company_name` + `user_name`;
+- rotas de agenda e expediente exigem autenticação;
+- foram adicionados CRUDs de customers e professionals;
+- o agente local passou a resolver tenant por `AGENT_COMPANY_NAME`.
 
 ## Principais Funcionalidades
 
-### 1) Gestão de Agendamentos
+### Multi-tenant
 
-- Criar agendamento com nome do cliente, data e hora.
-- Listar todos os agendamentos.
-- Buscar agendamento por ID.
-- Atualizar agendamento existente.
-- Deletar agendamento.
+- Isolamento completo de dados por empresa.
+- Mesmo `user_name` pode existir em empresas diferentes.
+- Agendamentos no mesmo dia e hora são permitidos em empresas distintas.
 
-### 2) Gestão de Horário de Funcionamento
+### Autenticação
 
-- Configurar expediente por dia da semana.
-- Configurar duração de slot de atendimento (em minutos).
-- Configurar intervalo de almoço opcional.
-- Listar horários configurados.
-- Calcular total de slots disponíveis em um dia.
+- Registro e login por empresa e usuário interno.
+- Access token JWT com validade curta.
+- Refresh token para renovação de sessão.
+- Endpoint `/auth/me` para resolver o usuário autenticado.
 
-### 3) Sugestão de Horários Recorrentes
+### Gestão de Customers
 
-- Aprende padrões do cliente com base em agendamentos anteriores.
-- Prioriza combinações recorrentes de dia da semana + horário.
-- Valida disponibilidade real (expediente ativo e sem conflito).
-- Faz fallback para próximos horários livres quando não houver histórico suficiente.
+- Criar, listar, consultar, atualizar e remover clientes finais.
+- Nomes únicos por empresa.
+- Reuso automático do customer em novos agendamentos quando o nome já existe.
 
-### 4) Saúde da API
+### Gestão de Professionals
 
-- Endpoint de health check para monitoramento.
+- Criar, listar, consultar, atualizar e remover profissionais.
+- Campo `is_active` para operação futura e filtragens.
+- Associação opcional em cada agendamento.
 
-### 5) Autenticação e Segurança
+### Gestão de Agendamentos
 
-- Login por cliente + senha.
-- Access token JWT com expiração de 10 minutos.
-- Refresh token para renovação sem novo login.
-- Rotas de escrita protegidas por Bearer Token.
+- CRUD completo de agendamentos.
+- Associação por `customer_name` e `professional_id` opcional.
+- Sugestão de horários recorrentes com base no histórico do customer.
+- Bloqueio de conflito de horário dentro da mesma empresa.
 
-### 6) Agente de Atendimento (Preparado para IA)
+### Gestão de Expediente
 
-- Módulo local de agente em `agent/` para testes incrementais.
-- Interpretação de intenção por mensagem (consultar horários e agendar).
-- Execução das regras reais de negócio da agenda (conflito e almoço).
-- Modo offline para validação funcional sem dependência de provedor externo.
-- Ambiente pronto para plugar provedor de IA quando desejado.
+- Configuração por dia da semana.
+- Duração customizável de slot.
+- Intervalo de almoço opcional.
+- Cálculo de slots disponíveis por weekday.
 
----
+### Agente Local
 
-## Regras de Negócio Implementadas
+- Opera em modo offline para testes rápidos.
+- Reaproveita os mesmos services da API.
+- Resolve tenant por `AGENT_COMPANY_NAME`.
+- Pode ser evoluído para WhatsApp, chatbot ou outro provider depois.
 
-### Agendamento
+## Regras de Negócio
 
-- Data deve estar no formato `DD/MM/YYYY`.
-- Hora deve estar no formato `HH:MM:SS`.
-- Não permite conflito de data/hora entre agendamentos.
-- Não permite agendar fora do horário de funcionamento ativo do dia.
-- Se o horário estiver no intervalo de almoço, o agendamento é rejeitado.
+### Agendamentos
 
-### Sugestão de Horários
+- `date` deve estar no formato `DD/MM/YYYY`.
+- `time` deve estar no formato `HH:MM:SS`.
+- Não pode haver conflito de data e hora dentro da mesma empresa.
+- O horário deve estar dentro do expediente ativo do dia.
+- Horários dentro do almoço são rejeitados.
+- `professional_id`, quando informado, precisa pertencer à mesma empresa do usuário autenticado.
 
-- Usa histórico por cliente para aprender recorrência de `weekday + time`.
-- Ordena preferências por frequência e recência.
-- Retorna somente sugestões válidas no expediente ativo.
-- Nunca sugere horário já ocupado.
-- Se não houver histórico, retorna próximos slots livres por ordem cronológica.
+### Sugestões
 
-### Horário de Funcionamento
+- O histórico é calculado por customer dentro da empresa atual.
+- Preferências consideram recorrência de `weekday + time`.
+- Horários sugeridos só aparecem se estiverem livres e dentro do expediente.
+- Sem histórico suficiente, a API retorna os próximos slots livres.
 
-- `start_time` deve ser menor que `end_time`.
-- Se almoço for informado:
-  - `lunch_start` deve ser menor que `lunch_end`.
-  - almoço deve estar completamente dentro do expediente.
+### Working Hours
+
+- `weekday` vai de `0` a `6`.
+- `start_time` deve ser anterior a `end_time`.
 - `slot_duration_minutes` deve ser maior que zero.
-- `weekday` deve estar entre `0` e `6` (segunda a domingo).
+- Se almoço for informado, ele deve estar inteiramente dentro do expediente.
 
-### Mapeamento de weekday
+### Weekday
 
-- `0` = SEGUNDA
-- `1` = TERÇA
-- `2` = QUARTA
-- `3` = QUINTA
-- `4` = SEXTA
-- `5` = SÁBADO
-- `6` = DOMINGO
-
----
+- `0` = segunda
+- `1` = terça
+- `2` = quarta
+- `3` = quinta
+- `4` = sexta
+- `5` = sábado
+- `6` = domingo
 
 ## Arquitetura
 
-O projeto segue uma separação por camadas:
+O projeto segue separação por camadas:
 
-- **Routers (API)**: entrada HTTP, validação inicial de payload e códigos de resposta.
-- **Services (Negócio)**: regras de domínio e orquestração.
-- **Repositories (Dados)**: queries e persistência com SQLAlchemy.
-- **Models (ORM)**: entidades do banco de dados.
-- **Database**: configuração do engine, session e base declarativa.
-- **Agent**: camada local de interação por mensagem, preparada para receber um provedor de IA no futuro.
+- `app/api`: entrada HTTP e contratos de resposta.
+- `app/services`: regras de negócio e orquestração.
+- `app/repositories`: acesso e persistência dos dados.
+- `app/models`: entidades ORM.
+- `app/schemas`: payloads e responses Pydantic.
+- `agent`: interface conversacional local sobre o mesmo domínio.
 
 Fluxo principal:
 
-1. Requisição chega no router.
-2. Router chama service.
-3. Service aplica regras (conflito, expediente, parsing, etc.).
-4. Service usa repository para acessar/persistir dados.
-5. Repository interage com models via Session.
+1. A requisição entra por um router.
+2. O router resolve o usuário autenticado.
+3. O service aplica validações e regras de negócio.
+4. Os repositories persistem ou consultam dados filtrados por empresa.
+5. A resposta volta serializada pelos schemas.
 
-Fluxo atual do agente local:
+Fluxo do agente:
 
-1. Usuário envia uma mensagem no terminal.
-2. O módulo `agent/agent.py` identifica a intenção da mensagem.
-3. O módulo `agent/tools.py` reutiliza as regras e serviços já existentes da API.
-4. O agente responde com horários disponíveis ou com o resultado do agendamento.
-
----
+1. O usuário envia uma mensagem no terminal.
+2. `agent/agent.py` interpreta a intenção.
+3. `agent/tools.py` resolve a empresa pelo nome configurado.
+4. O agente consulta slots ou cria o agendamento usando os mesmos services da API.
 
 ## Estrutura de Pastas
 
 ```text
 smart-schedule-api/
 ├── agent/
-│   ├── __init__.py
 │   ├── agent.py
 │   ├── config.py
 │   ├── main.py
 │   └── tools.py
 ├── app/
-│   ├── api/
-│   │   ├── __init__.py
-│   │   └── v1/
-│   │       ├── __init__.py
-│   │       └── routers/
-│   │           ├── auth.py
-│   │           ├── health.py
-│   │           ├── schedule.py
-│   │           └── working_hours.py
-│   ├── core/
-│   │   ├── dependencies.py
-│   │   ├── security.py
-│   │   └── __init__.py
-│   ├── database/
-│   │   ├── __init__.py
-│   │   └── session.py
-│   ├── enum/
-│   │   └── weekday.py
-│   ├── models/
-│   │   ├── __init__.py
-│   │   ├── client.py
-│   │   ├── schedule_model.py
-│   │   └── working_hours_model.py
-│   ├── repositories/
-│   │   ├── __init__.py
-│   │   ├── client_repository.py
-│   │   └── schedule_repository.py
-│   ├── schemas/
-│   │   ├── __init__.py
+│   ├── api/v1/routers/
 │   │   ├── auth.py
+│   │   ├── customers.py
+│   │   ├── health.py
+│   │   ├── professionals.py
 │   │   ├── schedule.py
 │   │   └── working_hours.py
+│   ├── core/
+│   ├── database/
+│   ├── enum/
+│   ├── models/
+│   │   ├── company.py
+│   │   ├── customer.py
+│   │   ├── professional.py
+│   │   ├── schedule_model.py
+│   │   ├── user.py
+│   │   └── working_hours_model.py
+│   ├── repositories/
+│   ├── schemas/
 │   ├── services/
-│   │   ├── __init__.py
-│   │   ├── auth_service.py
-│   │   ├── schedule_service.py
-│   │   └── working_hours_service.py
-│   ├── __init__.py
 │   └── main.py
 ├── tests/
 │   ├── conftest.py
 │   ├── test_auth.py
+│   ├── test_customers.py
+│   ├── test_professionals.py
 │   ├── test_schedule.py
 │   └── test_working_hours.py
-├── .env.example
 ├── reset_db.py
-├── smart_schedule.db
 ├── requirements.txt
-├── LICENSE
-└── .gitignore
+├── README.md
+└── LICENSE
 ```
 
----
+## Stack
 
-## Stack e Dependências
+Principais componentes da aplicação:
 
-Dependências principais:
-
+- Python 3.13+
 - FastAPI
-- SQLAlchemy
+- SQLAlchemy 2.x
 - Pydantic
-- Uvicorn
-- Pytest
-- HTTPX (suporte aos testes e cliente HTTP)
-- Passlib (hash de senha com pbkdf2_sha256)
-- Python-JOSE (JWT)
-- Python-Dotenv (carregamento de variáveis de ambiente)
+- python-jose
+- passlib
+- python-dotenv
+- pytest
+- httpx
+- uvicorn
 
-Arquivo de dependências: `requirements.txt`
-
----
-
-## Como Rodar o Projeto
+## Como Rodar
 
 ### Pré-requisitos
 
 - Python 3.13+
-- Pip
+- Ambiente virtual recomendado
 
-### 1) Clonar o repositório
+### 1. Clonar o repositório
 
 ```bash
 git clone https://github.com/Megadurck/smart-schedule-api.git
 cd smart-schedule-api
 ```
 
-### 2) Criar e ativar ambiente virtual
+### 2. Criar e ativar o ambiente virtual
 
-#### Windows (PowerShell)
+Windows PowerShell:
 
 ```powershell
 python -m venv venv
 .\venv\Scripts\Activate.ps1
 ```
 
-#### Linux/macOS
+Linux ou macOS:
 
 ```bash
 python3 -m venv venv
 source venv/bin/activate
 ```
 
-### 3) Instalar dependências
+### 3. Instalar dependências
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4) Configurar variáveis de ambiente
+### 4. Configurar variáveis de ambiente
 
-`SECRET_KEY` é obrigatória para geração/validação de JWT.
+Variáveis mínimas:
 
-Você pode usar `.env.example` como base.
+- `SECRET_KEY`: chave usada para assinar os JWTs.
+- `AGENT_PROVIDER`: provider do agente, hoje normalmente `offline`.
+- `AGENT_COMPANY_NAME`: empresa que o agente local vai operar.
 
-#### Windows (PowerShell)
+Exemplo PowerShell:
 
 ```powershell
 $env:SECRET_KEY="troque-por-uma-chave-forte"
 $env:AGENT_PROVIDER="offline"
+$env:AGENT_COMPANY_NAME="empresa_demo"
 ```
 
-#### Linux/macOS
+Exemplo Linux ou macOS:
 
 ```bash
 export SECRET_KEY="troque-por-uma-chave-forte"
 export AGENT_PROVIDER="offline"
+export AGENT_COMPANY_NAME="empresa_demo"
 ```
 
-Variáveis opcionais do agente:
+Variáveis opcionais:
 
-- `AGENT_PROVIDER=offline` para o modo local de testes.
-- `OPENAI_API_KEY=...` para preparar integração com provedor online no futuro.
+- `OPENAI_API_KEY`: reservada para integração futura com provider online.
 
-### 5) Rodar a API em desenvolvimento
+### 5. Subir a API
 
 ```bash
 uvicorn app.main:app --reload
 ```
 
-A API ficará disponível em:
+A raiz `/` redireciona para `/docs`.
 
-- http://127.0.0.1:8000 (redireciona automaticamente para o Swagger)
+### 6. Resetar o banco local
 
-### 6) Executar o agente local (modo offline)
+```bash
+python reset_db.py
+```
+
+### 7. Rodar o agente local
 
 ```bash
 python -m agent.agent
 ```
 
-Exemplos de mensagens para testar no terminal:
+Exemplos de mensagens:
 
 - `horarios para 03/03/2026`
 - `agendar nome Maria em 03/03/2026 09:00:00`
-- `agendar nome Joao em 03/03/2026 12:30:00`
-
-Para preparar integração com provedor de IA, configure as variáveis de ambiente:
-
-- `AGENT_PROVIDER=offline` (padrão)
-- `OPENAI_API_KEY=...` (opcional, para provider online)
-
----
 
 ## Documentação Interativa
 
-Com a aplicação rodando, acesse:
+Com a API rodando:
 
-- Swagger UI: http://127.0.0.1:8000/docs
-- ReDoc: http://127.0.0.1:8000/redoc
-
-Ao abrir a raiz `/`, o browser é redirecionado automaticamente para o Swagger.
-
----
+- Swagger UI: `http://127.0.0.1:8000/docs`
+- ReDoc: `http://127.0.0.1:8000/redoc`
 
 ## Autenticação JWT
 
 Fluxo recomendado:
 
-1. Registrar credencial de cliente em `POST /auth/register`.
-2. Fazer login em `POST /auth/login`.
-3. Usar `access_token` no header `Authorization: Bearer <token>`.
-4. Ao expirar access token (10 min), usar `POST /auth/refresh`.
-5. Se refresh token expirar, fazer login novamente.
+1. Registrar usuário interno em `POST /api/v1/auth/register`.
+2. Fazer login em `POST /api/v1/auth/login`.
+3. Enviar `Authorization: Bearer <access_token>` nas rotas protegidas.
+4. Renovar sessão em `POST /api/v1/auth/refresh`.
+5. Consultar usuário logado em `GET /api/v1/auth/me`.
 
-Mensagens de expiração:
+Payload de registro e login:
 
-- Access token expirado: orientar refresh ou novo login.
-- Refresh token expirado: orientar novo login.
+```json
+{
+  "company_name": "empresa_demo",
+  "user_name": "admin",
+  "password": "senha123"
+}
+```
 
-Obs.: requisição sem token em rota protegida retorna `401 Unauthorized`.
+O token devolvido inclui o tenant da sessão e é usado para filtrar todos os recursos protegidos.
 
----
-
-## API Endpoints
+## Endpoints
 
 Base path: `/api/v1`
 
@@ -377,55 +339,59 @@ Base path: `/api/v1`
 
 - `GET /health`
 
-### Schedule
+### Auth
 
-- `GET /schedule/` -> lista todos
-- `GET /schedule/{id}` -> busca por ID
-- `POST /schedule/` -> cria (protegido)
-- `PUT /schedule/{id}` -> atualiza (protegido)
-- `DELETE /schedule/{id}` -> remove (protegido)
-- `POST /schedule/suggestions` -> sugere horários recorrentes por cliente (protegido)
+- `POST /auth/register`
+- `POST /auth/login`
+- `POST /auth/refresh`
+- `GET /auth/me`
 
 ### Working Hours
 
-- `GET /working-hours/` -> lista configurações
-- `POST /working-hours/` -> cria/atualiza configuração do dia (protegido)
-- `GET /working-hours/slots/{weekday}` -> calcula slots disponíveis
+- `GET /working-hours/`
+- `POST /working-hours/`
+- `GET /working-hours/slots/{weekday}`
 
-### Auth
+### Schedule
 
-- `POST /auth/register` -> cria credencial para cliente e devolve tokens
-- `POST /auth/login` -> autentica cliente e devolve tokens
-- `POST /auth/refresh` -> renova access token
-- `GET /auth/me` -> retorna cliente autenticado
+- `GET /schedule/`
+- `GET /schedule/{id}`
+- `POST /schedule/`
+- `PUT /schedule/{id}`
+- `DELETE /schedule/{id}`
+- `POST /schedule/suggestions`
 
----
+### Customers
 
-## Exemplos de Uso
+- `GET /customers/`
+- `GET /customers/{customer_id}`
+- `POST /customers/`
+- `PUT /customers/{customer_id}`
+- `DELETE /customers/{customer_id}`
 
-### Registrar credencial
+### Professionals
+
+- `GET /professionals/`
+- `GET /professionals/{professional_id}`
+- `POST /professionals/`
+- `PUT /professionals/{professional_id}`
+- `DELETE /professionals/{professional_id}`
+
+## Exemplos de Payload
+
+### Registrar usuário interno
 
 ```bash
 curl -X POST "http://127.0.0.1:8000/api/v1/auth/register" \
   -H "Content-Type: application/json" \
   -d '{
-    "client_name": "joao",
+    "company_name": "barbearia_centro",
+    "user_name": "admin",
     "password": "senha123"
   }'
 ```
 
-### Login
-
-```bash
-curl -X POST "http://127.0.0.1:8000/api/v1/auth/login" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "client_name": "joao",
-    "password": "senha123"
-  }'
-```
-
-### Definir expediente (segunda)
+### Configurar expediente
 
 ```bash
 curl -X POST "http://127.0.0.1:8000/api/v1/working-hours/" \
@@ -441,6 +407,29 @@ curl -X POST "http://127.0.0.1:8000/api/v1/working-hours/" \
   }'
 ```
 
+### Criar customer
+
+```bash
+curl -X POST "http://127.0.0.1:8000/api/v1/customers/" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer SEU_ACCESS_TOKEN" \
+  -d '{
+    "name": "Maria Souza"
+  }'
+```
+
+### Criar professional
+
+```bash
+curl -X POST "http://127.0.0.1:8000/api/v1/professionals/" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer SEU_ACCESS_TOKEN" \
+  -d '{
+    "name": "Dra. Ana",
+    "is_active": true
+  }'
+```
+
 ### Criar agendamento
 
 ```bash
@@ -448,56 +437,65 @@ curl -X POST "http://127.0.0.1:8000/api/v1/schedule/" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer SEU_ACCESS_TOKEN" \
   -d '{
-    "client_name": "João Silva",
+    "customer_name": "Maria Souza",
     "date": "03/03/2026",
-    "time": "10:00:00"
+    "time": "09:00:00",
+    "professional_id": 1
   }'
 ```
 
-### Consultar slots do dia
-
-```bash
-curl "http://127.0.0.1:8000/api/v1/working-hours/slots/0"
-```
-
-### Sugerir horários para cliente
+### Sugerir horários
 
 ```bash
 curl -X POST "http://127.0.0.1:8000/api/v1/schedule/suggestions" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer SEU_ACCESS_TOKEN" \
   -d '{
-    "client_name": "João Silva",
+    "customer_name": "Maria Souza",
     "start_date": "11/03/2026",
     "limit": 3,
     "search_days": 30
   }'
 ```
 
-### Testar agente local em modo offline
-
-```bash
-python -m agent.agent
-```
-
-Exemplo de sessão:
-
-```text
-> horarios para 03/03/2026
-Horarios disponiveis: 03/03/2026 08:00:00, 03/03/2026 08:30:00, ...
-
-> agendar nome Maria em 03/03/2026 09:00:00
-Agendamento confirmado para Maria em 03/03/2026 as 09:00:00.
-```
-
----
-
 ## Testes
 
-A suíte utiliza Pytest e está organizada em:
+A suíte usa pytest e cobre os principais fluxos do domínio atual:
 
-- `tests/test_schedule.py`
-- `tests/test_working_hours.py`
+- autenticação multi-tenant;
+- isolamento de agendamentos por empresa;
+- regras de expediente e slots;
+- CRUD de customers;
+- CRUD de professionals;
+- associação opcional de professional em schedules.
+
+Execução:
+
+```bash
+pytest -q
+```
+
+Resultado validado nesta versão: `59 passed`.
+
+## Banco de Dados
+
+O banco local padrão é SQLite. Em desenvolvimento, o schema é criado automaticamente na subida da aplicação. Quando houver mudança estrutural relevante, o fluxo recomendado é resetar o banco local com:
+
+```bash
+python reset_db.py
+```
+
+## Próximos Passos
+
+- integrar o agente a um canal real, como WhatsApp;
+- incluir migrations formais para ambientes persistentes;
+- adicionar autorização por papéis de usuário interno;
+- expandir disponibilidade por profissional, não apenas por empresa.
+
+## Licença
+
+Distribuído sob a licença MIT. Consulte `LICENSE` para detalhes.
+
 - `tests/test_auth.py`
 - `tests/conftest.py`
 

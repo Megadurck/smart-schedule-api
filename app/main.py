@@ -4,8 +4,11 @@ from contextlib import asynccontextmanager
 from app.api.v1 import api_router
 
 from app.database.session import engine, Base, ensure_auth_columns
-from app.models.client import Client
+from app.models.company import Company
+from app.models.customer import Customer
+from app.models.professional import Professional
 from app.models.schedule_model import Schedule
+from app.models.user import User
 from app.models.working_hours_model import WorkingHours
 
 @asynccontextmanager

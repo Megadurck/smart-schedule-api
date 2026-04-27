@@ -3,11 +3,14 @@
 from app.schemas.schedule import (
     ScheduleCreate,
     ScheduleResponse,
-    ClientResponse,
+    CustomerResponse,
+    ProfessionalSummaryResponse,
     ScheduleSuggestionRequest,
     ScheduleSuggestionItem,
     ScheduleSuggestionResponse,
 )
+from app.schemas.customer import CustomerCreate, CustomerRecord, CustomerUpdate
+from app.schemas.professional import ProfessionalCreate, ProfessionalResponse, ProfessionalUpdate
 from app.schemas.working_hours import WorkingHoursCreate, WorkingHoursResponse
 from app.schemas.auth import (
     AuthRegister,
@@ -20,12 +23,19 @@ from app.schemas.auth import (
 __all__ = [
     "ScheduleCreate",
     "ScheduleResponse",
-    "ClientResponse",
+    "CustomerResponse",
+    "ProfessionalSummaryResponse",
     "ScheduleSuggestionRequest",
     "ScheduleSuggestionItem",
     "ScheduleSuggestionResponse",
     "WorkingHoursCreate",
     "WorkingHoursResponse",
+    "CustomerCreate",
+    "CustomerRecord",
+    "CustomerUpdate",
+    "ProfessionalCreate",
+    "ProfessionalResponse",
+    "ProfessionalUpdate",
     "AuthRegister",
     "AuthLogin",
     "RefreshTokenRequest",

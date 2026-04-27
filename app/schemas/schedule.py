@@ -15,25 +15,34 @@ from pydantic import BaseModel, Field
 class ScheduleCreate(BaseModel):
     """Payload de criação/atualização de agendamento."""
 
-    # Nome do cliente usado para localizar ou criar o cadastro.
-    client_name: str
+    # Nome do cliente final usado para localizar ou criar o cadastro.
+    customer_name: str
     # Data no formato DD/MM/YYYY (regra de parse fica no service).
     date: str
     # Hora no formato HH:MM:SS (regra de parse fica no service).
     time: str
+    professional_id: int | None = None
 
 
 # ---------------------------------------------------------------------------
 # Schemas de saída (o que a API devolve)
 # ---------------------------------------------------------------------------
 
-class ClientResponse(BaseModel):
-    """Dados do cliente expostos na resposta — apenas o necessário."""
+class CustomerResponse(BaseModel):
+    """Dados do cliente final expostos na resposta — apenas o necessário."""
 
     id: int
     name: str
 
     # Permite que o Pydantic leia atributos de objetos SQLAlchemy diretamente.
+    model_config = {"from_attributes": True}
+
+
+class ProfessionalSummaryResponse(BaseModel):
+    id: int
+    name: str
+    is_active: bool
+
     model_config = {"from_attributes": True}
 
 
@@ -45,16 +54,17 @@ class ScheduleResponse(BaseModel):
     date: date
     # Pydantic serializa datetime.time para "HH:MM:SS" automaticamente.
     time: time
-    # Dados do cliente aninhados — sem expor client_id interno.
-    client: ClientResponse
+    # Dados do cliente final aninhados — sem expor customer_id interno.
+    customer: CustomerResponse
+    professional: ProfessionalSummaryResponse | None = None
 
     model_config = {"from_attributes": True}
 
 
 class ScheduleSuggestionRequest(BaseModel):
-    """Payload para sugerir horários com base no histórico do cliente."""
+    """Payload para sugerir horários com base no histórico do cliente final."""
 
-    client_name: str
+    customer_name: str
     # Data base para iniciar busca de sugestões, no formato DD/MM/YYYY.
     start_date: str | None = None
     # Quantidade máxima de sugestões retornadas.
@@ -73,7 +83,7 @@ class ScheduleSuggestionItem(BaseModel):
 
 
 class ScheduleSuggestionResponse(BaseModel):
-    """Resposta com sugestões de horário para um cliente."""
+    """Resposta com sugestões de horário para um cliente final."""
 
-    client_name: str
+    customer_name: str
     suggestions: list[ScheduleSuggestionItem]

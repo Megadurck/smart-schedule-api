@@ -18,7 +18,7 @@ def parse_intent(message: str) -> dict:
     if any(word in text for word in ["agendar", "marcar"]):
         return {
             "action": "create_schedule",
-            "client_name": _extract_name(message),
+            "customer_name": _extract_name(message),
             "date": _extract_date(message),
             "time": _extract_time(message),
         }
@@ -47,23 +47,23 @@ def handle_message(message: str) -> str:
             return f"Horarios disponiveis: {human_slots}"
 
         if intent["action"] == "create_schedule":
-            client_name = intent.get("client_name")
+            customer_name = intent.get("customer_name")
             schedule_date = intent.get("date")
             schedule_time = intent.get("time")
 
-            if not client_name or not schedule_date or not schedule_time:
+            if not customer_name or not schedule_date or not schedule_time:
                 return (
                     "Para agendar, use: agendar nome Maria em 03/03/2026 09:00:00"
                 )
 
             created = tools.create_schedule_offline(
                 db,
-                client_name=client_name,
+                customer_name=customer_name,
                 schedule_date=schedule_date,
                 schedule_time=schedule_time,
             )
             return (
-                f"Agendamento confirmado para {created.client.name} em "
+                f"Agendamento confirmado para {created.customer.name} em "
                 f"{created.date.strftime('%d/%m/%Y')} as {created.time.strftime('%H:%M:%S')}."
             )
 
