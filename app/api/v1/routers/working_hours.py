@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from datetime import time as time_type
 
-from app.core.dependencies import get_current_user
-from app.database.session import get_db
+from app.core.dependencies import get_working_hours_repo
+from app.repositories.working_hours_repository import WorkingHoursRepository
 from app.services import working_hours_service
 from app.enum.weekday import Weekday
 from app.schemas import WorkingHoursCreate, WorkingHoursResponse
@@ -13,20 +13,16 @@ router = APIRouter(prefix="/working-hours", tags=["Working Hours"])
 
 # 🔹 LISTAR TODOS OS HORÁRIOS DE FUNCIONAMENTO
 @router.get("/", response_model=list[WorkingHoursResponse])
-def list_working_hours(
-    db = Depends(get_db),
-    current_user = Depends(get_current_user),
-):
+def list_working_hours(repo: WorkingHoursRepository = Depends(get_working_hours_repo)):
     """Lista todos os horários de funcionamento configurados"""
-    return working_hours_service.list_working_hours(db, current_user.company_id)
+    return working_hours_service.list_working_hours(repo)
 
 
 # 🔹 DEFINIR HORÁRIO DE FUNCIONAMENTO
 @router.post("/", response_model=WorkingHoursResponse, status_code=201)
 def set_working_hours(
     payload: WorkingHoursCreate,
-    db = Depends(get_db),
-    current_user = Depends(get_current_user),
+    repo: WorkingHoursRepository = Depends(get_working_hours_repo),
 ):
     """Define o horário de funcionamento para um dia da semana via JSON
     
@@ -39,10 +35,9 @@ def set_working_hours(
     - lunch_end: Horário de fim do almoço (padrão 14:00:00)
     """
     return _validate_and_set_working_hours(
-        db, 
-        current_user.company_id,
-        payload.weekday, 
-        payload.start_time, 
+        repo,
+        payload.weekday,
+        payload.start_time,
         payload.end_time,
         payload.slot_duration_minutes,
         payload.lunch_start,
@@ -54,8 +49,7 @@ def set_working_hours(
 @router.get("/slots/{weekday}")
 def get_available_slots(
     weekday: Weekday,
-    db = Depends(get_db),
-    current_user = Depends(get_current_user),
+    repo: WorkingHoursRepository = Depends(get_working_hours_repo),
 ):
     """Calcula quantos slots de atendimento estão disponíveis para um dia
     
@@ -68,20 +62,16 @@ def get_available_slots(
         "slot_duration_minutes": 30
     }
     """
-    return working_hours_service.calculate_available_slots(
-        db,
-        current_user.company_id,
-        weekday.value,
-    )
+    return working_hours_service.calculate_available_slots(repo, weekday.value)
 
 
 def _validate_and_set_working_hours(
-    db,
-    company_id: int,
+    repo: WorkingHoursRepository,
     weekday: Weekday,
     start_time: str,
     end_time: str,
-    slot_duration_minutes: int = 30, lunch_start: str | None = "12:00:00", 
+    slot_duration_minutes: int = 30,
+    lunch_start: str | None = "12:00:00",
     lunch_end: str | None = "14:00:00"
 ):
     """Realiza validações de domínio e configura horários de funcionamento
@@ -107,13 +97,13 @@ def _validate_and_set_working_hours(
             status_code=400,
             detail="Formato de hora inválido. Use HH:MM:SS",
         )
-    
+
     if start >= end:
         raise HTTPException(
             status_code=400,
             detail="A hora inicial deve ser anterior à hora final",
         )
-    
+
     if lunch_start_time and lunch_end_time:
         if lunch_start_time >= lunch_end_time:
             raise HTTPException(
@@ -125,22 +115,21 @@ def _validate_and_set_working_hours(
                 status_code=400,
                 detail="Horário de almoço deve estar dentro do expediente",
             )
-    
+
     if slot_duration_minutes <= 0:
         raise HTTPException(
             status_code=400,
             detail="Duração do slot deve ser maior que 0 minutos",
         )
-    
+
     if weekday.value < 0 or weekday.value > 6:
         raise HTTPException(
             status_code=400,
             detail="weekday deve estar entre 0 (segunda) e 6 (domingo)",
         )
-    
+
     return working_hours_service.set_working_hours(
-        db,
-        company_id,
+        repo,
         weekday.value,
         start,
         end,

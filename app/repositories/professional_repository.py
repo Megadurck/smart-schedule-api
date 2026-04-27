@@ -1,49 +1,51 @@
+from __future__ import annotations
+
 from sqlalchemy.orm import Session
 
 from app.models.professional import Professional
 
 
-def list_professionals(db: Session, company_id: int) -> list[Professional]:
-    return (
-        db.query(Professional)
-        .filter(Professional.company_id == company_id)
-        .order_by(Professional.name)
-        .all()
-    )
+class ProfessionalRepository:
+    def __init__(self, db: Session, company_id: int):
+        self.db = db
+        self.company_id = company_id
 
+    def list(self) -> list[Professional]:
+        return (
+            self.db.query(Professional)
+            .filter(Professional.company_id == self.company_id)
+            .order_by(Professional.name)
+            .all()
+        )
 
-def get_professional(db: Session, professional_id: int, company_id: int) -> Professional | None:
-    return (
-        db.query(Professional)
-        .filter(Professional.id == professional_id, Professional.company_id == company_id)
-        .first()
-    )
+    def get(self, professional_id: int) -> Professional | None:
+        return (
+            self.db.query(Professional)
+            .filter(Professional.id == professional_id, Professional.company_id == self.company_id)
+            .one_or_none()
+        )
 
+    def get_by_name(self, name: str) -> Professional | None:
+        return (
+            self.db.query(Professional)
+            .filter(Professional.name == name, Professional.company_id == self.company_id)
+            .one_or_none()
+        )
 
-def get_professional_by_name(db: Session, name: str, company_id: int) -> Professional | None:
-    return (
-        db.query(Professional)
-        .filter(Professional.name == name, Professional.company_id == company_id)
-        .first()
-    )
+    def create(self, name: str, is_active: bool = True) -> Professional:
+        professional = Professional(company_id=self.company_id, name=name, is_active=is_active)
+        self.db.add(professional)
+        self.db.commit()
+        self.db.refresh(professional)
+        return professional
 
+    def update(self, professional: Professional, name: str, is_active: bool) -> Professional:
+        professional.name = name
+        professional.is_active = is_active
+        self.db.commit()
+        self.db.refresh(professional)
+        return professional
 
-def create_professional(db: Session, company_id: int, name: str, is_active: bool = True) -> Professional:
-    professional = Professional(company_id=company_id, name=name, is_active=is_active)
-    db.add(professional)
-    db.commit()
-    db.refresh(professional)
-    return professional
-
-
-def update_professional(db: Session, professional: Professional, name: str, is_active: bool) -> Professional:
-    professional.name = name
-    professional.is_active = is_active
-    db.commit()
-    db.refresh(professional)
-    return professional
-
-
-def delete_professional(db: Session, professional: Professional) -> None:
-    db.delete(professional)
-    db.commit()
+    def delete(self, professional: Professional) -> None:
+        self.db.delete(professional)
+        self.db.commit()

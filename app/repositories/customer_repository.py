@@ -1,60 +1,60 @@
+from __future__ import annotations
+
 from sqlalchemy.orm import Session
 
 from app.models.customer import Customer
 
 
-def find_or_create_customer(db: Session, name: str, company_id: int) -> Customer:
-    customer = get_customer_by_name(db, name, company_id)
-    if customer:
+class CustomerRepository:
+    def __init__(self, db: Session, company_id: int):
+        self.db = db
+        self.company_id = company_id
+
+    def find_or_create(self, name: str) -> Customer:
+        customer = self.get_by_name(name)
+        if customer:
+            return customer
+        customer = Customer(name=name, company_id=self.company_id)
+        self.db.add(customer)
+        self.db.commit()
+        self.db.refresh(customer)
         return customer
 
-    customer = Customer(name=name, company_id=company_id)
-    db.add(customer)
-    db.commit()
-    db.refresh(customer)
-    return customer
+    def get_by_name(self, name: str) -> Customer | None:
+        return (
+            self.db.query(Customer)
+            .filter(Customer.name == name, Customer.company_id == self.company_id)
+            .one_or_none()
+        )
 
+    def get(self, customer_id: int) -> Customer | None:
+        return (
+            self.db.query(Customer)
+            .filter(Customer.id == customer_id, Customer.company_id == self.company_id)
+            .one_or_none()
+        )
 
-def get_customer_by_name(db: Session, name: str, company_id: int) -> Customer | None:
-    return (
-        db.query(Customer)
-        .filter(Customer.name == name, Customer.company_id == company_id)
-        .first()
-    )
+    def list(self) -> list[Customer]:
+        return (
+            self.db.query(Customer)
+            .filter(Customer.company_id == self.company_id)
+            .order_by(Customer.name)
+            .all()
+        )
 
+    def create(self, name: str) -> Customer:
+        customer = Customer(name=name, company_id=self.company_id)
+        self.db.add(customer)
+        self.db.commit()
+        self.db.refresh(customer)
+        return customer
 
-def get_customer(db: Session, customer_id: int, company_id: int) -> Customer | None:
-    return (
-        db.query(Customer)
-        .filter(Customer.id == customer_id, Customer.company_id == company_id)
-        .first()
-    )
+    def update(self, customer: Customer, name: str) -> Customer:
+        customer.name = name
+        self.db.commit()
+        self.db.refresh(customer)
+        return customer
 
-
-def list_customers(db: Session, company_id: int) -> list[Customer]:
-    return (
-        db.query(Customer)
-        .filter(Customer.company_id == company_id)
-        .order_by(Customer.name)
-        .all()
-    )
-
-
-def create_customer(db: Session, name: str, company_id: int) -> Customer:
-    customer = Customer(name=name, company_id=company_id)
-    db.add(customer)
-    db.commit()
-    db.refresh(customer)
-    return customer
-
-
-def update_customer(db: Session, customer: Customer, name: str) -> Customer:
-    customer.name = name
-    db.commit()
-    db.refresh(customer)
-    return customer
-
-
-def delete_customer(db: Session, customer: Customer) -> None:
-    db.delete(customer)
-    db.commit()
+    def delete(self, customer: Customer) -> None:
+        self.db.delete(customer)
+        self.db.commit()

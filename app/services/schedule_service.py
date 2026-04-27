@@ -2,11 +2,7 @@ from collections import defaultdict
 from datetime import datetime, time, date as date_type, timedelta
 
 from fastapi import HTTPException
-from sqlalchemy.orm import Session
 
-from app.repositories import customer_repository, schedule_repository
-from app.repositories import customer_repository, professional_repository, schedule_repository
-from app.services import working_hours_service
 from app.models.working_hours_model import WorkingHours
 
 
@@ -31,73 +27,62 @@ def parse_date_time(date_str: str, time_str: str):
 # auxiliares (helpers)
 # ---------------------------------------------------------------------------
 
-def validate_working_hours(
-    db: Session,
-    company_id: int,
-    schedule_date: date_type,
-    schedule_time: time,
-) -> bool:
-    """Verifica se o horário está dentro do horário de funcionamento do dia.
-    
-    Retorna ``True`` se está dentro, ``False`` caso contrário.
-    """
-    weekday = schedule_date.weekday()  # 0 = segunda, 6 = domingo
+def _is_within_working_hours(working_hours_repo, schedule_date: date_type, schedule_time: time) -> bool:
+    from app.services import working_hours_service
     return working_hours_service.is_within_working_hours(
-        db,
-        company_id,
-        weekday,
+        working_hours_repo,
+        schedule_date.weekday(),
         schedule_time,
     )
 
 
+def _get_professional_or_none(professional_repo, professional_id: int | None):
+    if professional_id is None:
+        return None
+    professional = professional_repo.get(professional_id)
+    if not professional:
+        raise HTTPException(status_code=404, detail="Profissional nao encontrado")
+    return professional
+
+
 # ---------------------------------------------------------------------------
-# Operações de Negócio (usando repositories)
+# Operações de Negócio (usando ScheduleBundle)
 # ---------------------------------------------------------------------------
 
-def list_schedules(db: Session, company_id: int):
-    """Lista todos os agendamentos."""
-    return schedule_repository.list_schedules(db, company_id)
+def list_schedules(bundle):
+    return bundle.schedules.list()
 
 
-def get_schedule(db: Session, schedule_id: int, company_id: int):
-    """Obtém um agendamento por ID."""
-    schedule = schedule_repository.get_schedule(db, schedule_id, company_id)
+def get_schedule(bundle, schedule_id: int):
+    schedule = bundle.schedules.get(schedule_id)
     if not schedule:
         raise HTTPException(status_code=404, detail="Agendamento não encontrado")
     return schedule
 
 
 def create_schedule(
-    db: Session,
-    company_id: int,
+    bundle,
     customer_name: str,
     date_str: str,
     time_str: str,
     professional_id: int | None = None,
 ):
-    """Cria um novo agendamento com validações de negócio."""
-    # Parsing
     schedule_date, schedule_time = parse_date_time(date_str, time_str)
 
-    # Validações de negócio
-    if schedule_repository.check_conflict(db, company_id, schedule_date, schedule_time):
+    if bundle.schedules.check_conflict(schedule_date, schedule_time):
         raise HTTPException(status_code=409, detail="Horário já ocupado")
-    
-    if not validate_working_hours(db, company_id, schedule_date, schedule_time):
+
+    if not _is_within_working_hours(bundle.working_hours, schedule_date, schedule_time):
         raise HTTPException(
             status_code=422,
             detail="Horário fora do funcionamento. Verifique os horários de trabalho disponíveis.",
         )
 
-    # Obter ou criar customer final
-    customer = customer_repository.find_or_create_customer(db, customer_name, company_id)
-    professional = _get_professional_or_none(db, company_id, professional_id)
+    customer = bundle.customers.find_or_create(customer_name)
+    professional = _get_professional_or_none(bundle.professionals, professional_id)
 
-    # Persistência (delegada ao repository)
-    return schedule_repository.create_schedule(
-        db,
+    return bundle.schedules.create(
         customer.id,
-        company_id,
         professional.id if professional else None,
         schedule_date,
         schedule_time,
@@ -105,67 +90,41 @@ def create_schedule(
 
 
 def update_schedule(
-    db: Session,
-    company_id: int,
+    bundle,
     schedule_id: int,
     customer_name: str,
     date_str: str,
     time_str: str,
     professional_id: int | None = None,
 ):
-    """Atualiza um agendamento com validações de negócio."""
-    # Parsing
     schedule_date, schedule_time = parse_date_time(date_str, time_str)
 
-    # Validações de negócio
-    if schedule_repository.check_conflict(
-        db,
-        company_id,
-        schedule_date,
-        schedule_time,
-        exclude_id=schedule_id,
-    ):
+    if bundle.schedules.check_conflict(schedule_date, schedule_time, exclude_id=schedule_id):
         raise HTTPException(status_code=409, detail="Horário já ocupado")
-    
-    if not validate_working_hours(db, company_id, schedule_date, schedule_time):
+
+    if not _is_within_working_hours(bundle.working_hours, schedule_date, schedule_time):
         raise HTTPException(
             status_code=422,
             detail="Horário fora do funcionamento. Verifique os horários de trabalho disponíveis.",
         )
 
-    # Obter ou criar customer final
-    customer = customer_repository.find_or_create_customer(db, customer_name, company_id)
-    professional = _get_professional_or_none(db, company_id, professional_id)
+    customer = bundle.customers.find_or_create(customer_name)
+    professional = _get_professional_or_none(bundle.professionals, professional_id)
 
-    # Persistência (delegada ao repository)
-    schedule = schedule_repository.update_schedule(
-        db,
+    schedule = bundle.schedules.update(
         schedule_id,
         customer.id,
-        company_id,
         professional.id if professional else None,
         schedule_date,
         schedule_time,
     )
     if not schedule:
         raise HTTPException(status_code=404, detail="Agendamento não encontrado")
-    
     return schedule
 
 
-def _get_professional_or_none(db: Session, company_id: int, professional_id: int | None):
-    if professional_id is None:
-        return None
-
-    professional = professional_repository.get_professional(db, professional_id, company_id)
-    if not professional:
-        raise HTTPException(status_code=404, detail="Profissional nao encontrado")
-    return professional
-
-
-def delete_schedule(db: Session, company_id: int, schedule_id: int):
-    """Deleta um agendamento."""
-    deleted = schedule_repository.delete_schedule(db, schedule_id, company_id)
+def delete_schedule(bundle, schedule_id: int):
+    deleted = bundle.schedules.delete(schedule_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Agendamento não encontrado")
     return {"detail": "Agendamento deletado"}
@@ -218,30 +177,24 @@ def _build_daily_slots(working_hours: WorkingHours) -> list[time]:
 
 
 def suggest_schedules(
-    db: Session,
-    company_id: int,
+    bundle,
     customer_name: str,
     start_date: str | None = None,
     limit: int = 3,
     search_days: int = 30,
 ):
     """Sugere horários com base no histórico do customer e disponibilidade atual."""
+    from app.services import working_hours_service
     base_date = _parse_optional_start_date(start_date)
     max_date = base_date + timedelta(days=search_days)
 
-    customer = customer_repository.get_customer_by_name(db, customer_name, company_id)
-    history = (
-        schedule_repository.list_schedules_by_customer(db, customer.id, company_id)
-        if customer
-        else []
-    )
+    customer = bundle.customers.get_by_name(customer_name)
+    history = bundle.schedules.list_by_customer(customer.id) if customer else []
 
     # Mapeia horários ativos de trabalho por dia da semana.
     working_hours_map = {
         item.weekday: item
-        for item in db.query(WorkingHours)
-        .filter(WorkingHours.company_id == company_id, WorkingHours.is_active == True)
-        .all()
+        for item in bundle.working_hours.list_active()
     }
 
     suggestions: list[dict] = []
@@ -279,13 +232,8 @@ def suggest_schedules(
             pair = (candidate_date, preferred_time)
             if pair not in seen_pairs:
                 is_available = (
-                    validate_working_hours(db, company_id, candidate_date, preferred_time)
-                    and not schedule_repository.check_conflict(
-                        db,
-                        company_id,
-                        candidate_date,
-                        preferred_time,
-                    )
+                    _is_within_working_hours(bundle.working_hours, candidate_date, preferred_time)
+                    and not bundle.schedules.check_conflict(candidate_date, preferred_time)
                 )
                 if is_available:
                     seen_pairs.add(pair)
@@ -311,7 +259,7 @@ def suggest_schedules(
                 if pair in seen_pairs:
                     continue
 
-                if not schedule_repository.check_conflict(db, company_id, current_date, slot):
+                if not bundle.schedules.check_conflict(current_date, slot):
                     seen_pairs.add(pair)
                     suggestions.append(
                         {

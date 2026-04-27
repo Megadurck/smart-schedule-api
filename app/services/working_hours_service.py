@@ -1,12 +1,11 @@
 from datetime import time
-from sqlalchemy.orm import Session
-from app.models.working_hours_model import WorkingHours
+
+from app.repositories.working_hours_repository import WorkingHoursRepository
 from app.enum.weekday import Weekday
 
 
 def set_working_hours(
-    db: Session,
-    company_id: int,
+    repo: WorkingHoursRepository,
     weekday: Weekday | int,
     start_time: time,
     end_time: time,
@@ -14,99 +13,37 @@ def set_working_hours(
     lunch_start: time | None = None,
     lunch_end: time | None = None,
 ):
-    # Validações de domínio
     if start_time >= end_time:
         raise ValueError("start_time must be before end_time")
-
     if lunch_start and lunch_end:
         if lunch_start >= lunch_end:
             raise ValueError("Invalid lunch interval")
-
         if lunch_start <= start_time or lunch_end >= end_time:
             raise ValueError("Lunch must be inside working hours")
-    
-    working_hours = (
-        db.query(WorkingHours)
-        .filter(WorkingHours.company_id == company_id, WorkingHours.weekday == weekday)
-        .first()
-    )
-
-    if working_hours:
-        working_hours.start_time = start_time
-        working_hours.end_time = end_time
-        working_hours.slot_duration_minutes = slot_duration_minutes
-        working_hours.lunch_start = lunch_start
-        working_hours.lunch_end = lunch_end
-        working_hours.is_active = True
-    else:
-        working_hours = WorkingHours(
-            company_id=company_id,
-            weekday= int(weekday),
-            start_time=start_time,
-            end_time=end_time,
-            slot_duration_minutes=slot_duration_minutes,
-            lunch_start=lunch_start,
-            lunch_end=lunch_end,
-            is_active=True
-        )
-        db.add(working_hours)
-
-    db.commit()
-    db.refresh(working_hours)
-
-    return working_hours
+    return repo.upsert(weekday, start_time, end_time, slot_duration_minutes, lunch_start, lunch_end)
 
 
-def list_working_hours(db: Session, company_id: int):
+def list_working_hours(repo: WorkingHoursRepository):
+    return repo.list()
 
-    return (
-        db.query(WorkingHours)
-        .filter(WorkingHours.company_id == company_id)
-        .order_by(WorkingHours.weekday)
-        .all()
-    )
 
 def is_within_working_hours(
-    db: Session,
-    company_id: int,
+    repo: WorkingHoursRepository,
     weekday: Weekday | int,
-    schedule_time: time
+    schedule_time: time,
 ) -> bool:
-
-    working_hours = (
-        db.query(WorkingHours)
-        .filter(
-            WorkingHours.company_id == company_id,
-            WorkingHours.weekday == weekday,
-            WorkingHours.is_active == True
-        )
-        .first()
-    )
-
-    if not working_hours:
+    wh = repo.get_active_by_weekday(weekday)
+    if not wh:
         return False
-
-    # Verificar se está dentro do horário de almoço
-    if working_hours.lunch_start and working_hours.lunch_end:
-        if working_hours.lunch_start <= schedule_time < working_hours.lunch_end:
+    if wh.lunch_start and wh.lunch_end:
+        if wh.lunch_start <= schedule_time < wh.lunch_end:
             return False
+    return wh.start_time <= schedule_time <= wh.end_time
 
-    return working_hours.start_time <= schedule_time <= working_hours.end_time
 
-
-def calculate_available_slots(db: Session, company_id: int, weekday: int) -> dict:
-    """Calcula quantos slots de atendimento estão disponíveis no dia"""
-    working_hours = (
-        db.query(WorkingHours)
-        .filter(
-            WorkingHours.company_id == company_id,
-            WorkingHours.weekday == weekday,
-            WorkingHours.is_active == True
-        )
-        .first()
-    )
-
-    if not working_hours:
+def calculate_available_slots(repo: WorkingHoursRepository, weekday: int) -> dict:
+    wh = repo.get_active_by_weekday(weekday)
+    if not wh:
         return {
             "weekday": int(weekday),
             "available_slots": 0,
@@ -114,33 +51,25 @@ def calculate_available_slots(db: Session, company_id: int, weekday: int) -> dic
             "lunch_duration_minutes": 0,
         }
 
-    # Convertendo time para minutos desde o início do dia
     def time_to_minutes(t: time) -> int:
         return t.hour * 60 + t.minute
 
-    start_minutes = time_to_minutes(working_hours.start_time)
-    end_minutes = time_to_minutes(working_hours.end_time)
-    
-    # Calcular tempo de pausa de almoço
+    start_minutes = time_to_minutes(wh.start_time)
+    end_minutes = time_to_minutes(wh.end_time)
     lunch_duration = 0
-    if working_hours.lunch_start and working_hours.lunch_end:
-        lunch_start_min = time_to_minutes(working_hours.lunch_start)
-        lunch_end_min = time_to_minutes(working_hours.lunch_end)
-        lunch_duration = lunch_end_min - lunch_start_min
+    if wh.lunch_start and wh.lunch_end:
+        lunch_duration = time_to_minutes(wh.lunch_end) - time_to_minutes(wh.lunch_start)
 
-    # Tempo total disponível
     total_time = end_minutes - start_minutes - lunch_duration
-    
-    # Calcular slots disponíveis
-    slot_duration = working_hours.slot_duration_minutes
+    slot_duration = wh.slot_duration_minutes
     available_slots = total_time // slot_duration if slot_duration > 0 else 0
 
     return {
         "weekday": int(weekday),
-        "start_time": str(working_hours.start_time),
-        "end_time": str(working_hours.end_time),
-        "lunch_start": str(working_hours.lunch_start) if working_hours.lunch_start else None,
-        "lunch_end": str(working_hours.lunch_end) if working_hours.lunch_end else None,
+        "start_time": str(wh.start_time),
+        "end_time": str(wh.end_time),
+        "lunch_start": str(wh.lunch_start) if wh.lunch_start else None,
+        "lunch_end": str(wh.lunch_end) if wh.lunch_end else None,
         "slot_duration_minutes": slot_duration,
         "total_available_minutes": total_time,
         "total_lunch_minutes": lunch_duration,
