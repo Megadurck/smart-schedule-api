@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 
 from app.core.dependencies import get_professional_repo
 from app.repositories.professional_repository import ProfessionalRepository
@@ -10,8 +10,12 @@ router = APIRouter(prefix="/professionals", tags=["Professionals"])
 
 
 @router.get("/", response_model=list[ProfessionalResponse])
-def list_professionals(repo: ProfessionalRepository = Depends(get_professional_repo)):
-    return professional_service.list_professionals(repo)
+def list_professionals(
+    repo: ProfessionalRepository = Depends(get_professional_repo),
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=20, ge=1, le=100),
+):
+    return professional_service.list_professionals(repo, skip=skip, limit=limit)
 
 
 @router.get("/{professional_id}", response_model=ProfessionalResponse)

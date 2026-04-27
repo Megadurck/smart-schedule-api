@@ -49,8 +49,8 @@ def _get_professional_or_none(professional_repo, professional_id: int | None):
 # Operações de Negócio (usando ScheduleBundle)
 # ---------------------------------------------------------------------------
 
-def list_schedules(bundle):
-    return bundle.schedules.list()
+def list_schedules(bundle, skip: int = 0, limit: int = 20):
+    return bundle.schedules.list(skip=skip, limit=limit)
 
 
 def get_schedule(bundle, schedule_id: int):
@@ -128,6 +128,13 @@ def delete_schedule(bundle, schedule_id: int):
     if not deleted:
         raise HTTPException(status_code=404, detail="Agendamento não encontrado")
     return {"detail": "Agendamento deletado"}
+
+
+def update_schedule_status(bundle, schedule_id: int, new_status):
+    schedule = bundle.schedules.update_status(schedule_id, new_status)
+    if not schedule:
+        raise HTTPException(status_code=404, detail="Agendamento não encontrado")
+    return schedule
 
 
 def _parse_optional_start_date(start_date: str | None) -> date_type:

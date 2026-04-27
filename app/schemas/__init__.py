@@ -3,6 +3,7 @@
 from app.schemas.schedule import (
     ScheduleCreate,
     ScheduleResponse,
+    ScheduleStatusUpdate,
     CustomerResponse,
     ProfessionalSummaryResponse,
     ScheduleSuggestionRequest,
@@ -23,6 +24,7 @@ from app.schemas.auth import (
 __all__ = [
     "ScheduleCreate",
     "ScheduleResponse",
+    "ScheduleStatusUpdate",
     "CustomerResponse",
     "ProfessionalSummaryResponse",
     "ScheduleSuggestionRequest",

@@ -3,8 +3,8 @@ from fastapi import HTTPException
 from app.repositories.professional_repository import ProfessionalRepository
 
 
-def list_professionals(repo: ProfessionalRepository):
-    return repo.list()
+def list_professionals(repo: ProfessionalRepository, skip: int = 0, limit: int = 20):
+    return repo.list(skip=skip, limit=limit)
 
 
 def get_professional(repo: ProfessionalRepository, professional_id: int):

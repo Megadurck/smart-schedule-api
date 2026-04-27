@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 
 from app.core.dependencies import ScheduleBundle, get_schedule_bundle
 from app.schemas import (
     ScheduleCreate,
     ScheduleResponse,
+    ScheduleStatusUpdate,
     ScheduleSuggestionRequest,
     ScheduleSuggestionResponse,
 )
@@ -15,9 +16,13 @@ router = APIRouter(prefix="/schedule", tags=["Schedule"])
 
 # 🔹 LISTAR TODOS OS AGENDAMENTOS
 @router.get("/", response_model=list[ScheduleResponse])
-def list_schedules(bundle: ScheduleBundle = Depends(get_schedule_bundle)):
-    """Lista todos os agendamentos registrados"""
-    return schedule_service.list_schedules(bundle)
+def list_schedules(
+    bundle: ScheduleBundle = Depends(get_schedule_bundle),
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=20, ge=1, le=100),
+):
+    """Lista agendamentos com paginação (skip/limit)"""
+    return schedule_service.list_schedules(bundle, skip=skip, limit=limit)
 
 
 # 🔹 OBTER AGENDAMENTO POR ID
@@ -69,6 +74,17 @@ def delete_schedule(
 ):
     """Deleta um agendamento pelo ID"""
     schedule_service.delete_schedule(bundle, id)
+
+
+# 🔹 ATUALIZAR STATUS DO AGENDAMENTO
+@router.patch("/{id}/status", response_model=ScheduleResponse)
+def update_schedule_status(
+    id: int,
+    payload: ScheduleStatusUpdate,
+    bundle: ScheduleBundle = Depends(get_schedule_bundle),
+):
+    """Atualiza o status de um agendamento (pending, confirmed, cancelled, completed)"""
+    return schedule_service.update_schedule_status(bundle, id, payload.status)
 
 
 @router.post("/suggestions", response_model=ScheduleSuggestionResponse)

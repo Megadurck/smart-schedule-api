@@ -10,11 +10,13 @@ class ProfessionalRepository:
         self.db = db
         self.company_id = company_id
 
-    def list(self) -> list[Professional]:
+    def list(self, skip: int = 0, limit: int = 20) -> list[Professional]:
         return (
             self.db.query(Professional)
             .filter(Professional.company_id == self.company_id)
             .order_by(Professional.name)
+            .offset(skip)
+            .limit(limit)
             .all()
         )
 

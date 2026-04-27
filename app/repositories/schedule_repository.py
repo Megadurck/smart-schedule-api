@@ -10,11 +10,14 @@ class ScheduleRepository:
         self.db = db
         self.company_id = company_id
 
-    def list(self) -> list[Schedule]:
+    def list(self, skip: int = 0, limit: int = 20) -> list[Schedule]:
         return (
             self.db.query(Schedule)
             .options(joinedload(Schedule.customer), joinedload(Schedule.professional))
             .filter(Schedule.company_id == self.company_id)
+            .order_by(Schedule.date.desc(), Schedule.time.desc())
+            .offset(skip)
+            .limit(limit)
             .all()
         )
 
@@ -111,4 +114,22 @@ class ScheduleRepository:
             .filter(Schedule.customer_id == customer_id, Schedule.company_id == self.company_id)
             .order_by(Schedule.date.desc())
             .all()
+        )
+
+    def update_status(self, schedule_id: int, new_status) -> Schedule | None:
+        schedule = (
+            self.db.query(Schedule)
+            .filter(Schedule.id == schedule_id, Schedule.company_id == self.company_id)
+            .one_or_none()
+        )
+        if not schedule:
+            return None
+        schedule.status = new_status
+        self.db.commit()
+        self.db.refresh(schedule)
+        return (
+            self.db.query(Schedule)
+            .options(joinedload(Schedule.customer), joinedload(Schedule.professional))
+            .filter(Schedule.id == schedule.id, Schedule.company_id == self.company_id)
+            .one_or_none()
         )

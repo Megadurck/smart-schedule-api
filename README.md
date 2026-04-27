@@ -8,7 +8,7 @@
   <img alt="Python" src="https://img.shields.io/badge/python-3.13+-blue.svg">
   <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-0.129.2-009688.svg">
   <img alt="SQLAlchemy" src="https://img.shields.io/badge/SQLAlchemy-2.0.47-D71F00.svg">
-  <img alt="Pytest" src="https://img.shields.io/badge/tests-59%20passed-0A9EDC.svg">
+  <img alt="Pytest" src="https://img.shields.io/badge/tests-68%20passed-0A9EDC.svg">
   <img alt="License" src="https://img.shields.io/badge/license-MIT-green.svg">
 </p>
 
@@ -76,6 +76,8 @@ Além disso:
 
 - CRUD completo de agendamentos.
 - Associação por `customer_name` e `professional_id` opcional.
+- Campo `status` no agendamento (`pending`, `confirmed`, `cancelled`, `completed`).
+- Campos de auditoria `created_at` e `updated_at`.
 - Sugestão de horários recorrentes com base no histórico do customer.
 - Bloqueio de conflito de horário dentro da mesma empresa.
 
@@ -358,6 +360,7 @@ Base path: `/api/v1`
 - `GET /schedule/{id}`
 - `POST /schedule/`
 - `PUT /schedule/{id}`
+- `PATCH /schedule/{id}/status`
 - `DELETE /schedule/{id}`
 - `POST /schedule/suggestions`
 
@@ -376,6 +379,25 @@ Base path: `/api/v1`
 - `POST /professionals/`
 - `PUT /professionals/{professional_id}`
 - `DELETE /professionals/{professional_id}`
+
+### Paginação
+
+Os endpoints de listagem aceitam paginação por query params:
+
+- `skip` (padrão: `0`, mínimo: `0`)
+- `limit` (padrão: `20`, mínimo: `1`, máximo: `100`)
+
+Disponível em:
+
+- `GET /schedule/`
+- `GET /customers/`
+- `GET /professionals/`
+
+Exemplo:
+
+```bash
+GET /api/v1/schedule/?skip=0&limit=20
+```
 
 ## Exemplos de Payload
 
@@ -444,6 +466,17 @@ curl -X POST "http://127.0.0.1:8000/api/v1/schedule/" \
   }'
 ```
 
+### Atualizar status do agendamento
+
+```bash
+curl -X PATCH "http://127.0.0.1:8000/api/v1/schedule/1/status" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer SEU_ACCESS_TOKEN" \
+  -d '{
+    "status": "confirmed"
+  }'
+```
+
 ### Sugerir horários
 
 ```bash
@@ -467,6 +500,9 @@ A suíte usa pytest e cobre os principais fluxos do domínio atual:
 - regras de expediente e slots;
 - CRUD de customers;
 - CRUD de professionals;
+- status do agendamento;
+- timestamps de agendamento;
+- paginação em listagens;
 - associação opcional de professional em schedules.
 
 Execução:
@@ -475,7 +511,7 @@ Execução:
 pytest -q
 ```
 
-Resultado validado nesta versão: `59 passed`.
+Resultado validado nesta versão: `68 passed`.
 
 ## Banco de Dados
 
@@ -495,66 +531,3 @@ python reset_db.py
 ## Licença
 
 Distribuído sob a licença MIT. Consulte `LICENSE` para detalhes.
-
-- `tests/test_auth.py`
-- `tests/conftest.py`
-
-O módulo `agent/` também foi validado manualmente em cenários de:
-
-- listagem de horários disponíveis;
-- bloqueio de conflito no mesmo horário;
-- bloqueio de agendamento durante o intervalo de almoço.
-
-Execução dos testes:
-
-```bash
-pytest -q
-```
-
-Resultado atual da suíte:
-
-- 51 testes passando
-
----
-
-## Banco de Dados
-
-- Banco local: SQLite
-- Arquivo: `smart_schedule.db`
-- URL configurada em `app/database/session.py`:
-
-```python
-SQLALCHEMY_DATABASE_URL = "sqlite:///./smart_schedule.db"
-```
-
-As tabelas são criadas automaticamente no startup da aplicação (lifespan do FastAPI).
-
-### Resetar banco
-
-```bash
-python reset_db.py
-```
-
----
-
-## Roadmap de Melhorias
-
-Sugestões para evolução do projeto:
-
-- adicionar migrations com Alembic;
-- separar `requirements` de produção e desenvolvimento;
-- mover configurações para um módulo central (`app/core/config.py`);
-- incluir autorização por papéis (roles/permissões);
-- implementar multi-tenant (owner por usuário/empresa);
-- expor o agente local por endpoint HTTP ou webhook;
-- conectar o agente a um provedor de IA para interpretação avançada de mensagens;
-- criar endpoint para confirmação automática de agendamento a partir de sugestão;
-- adicionar CI com lint, type-check e testes automatizados.
-
----
-
-## Licença
-
-Este projeto está sob licença MIT.
-
-Veja o arquivo [LICENSE](LICENSE).

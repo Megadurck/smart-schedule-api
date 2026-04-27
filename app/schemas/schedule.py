@@ -3,9 +3,11 @@
 Este módulo concentra os contratos de entrada e saída da API de agendamentos.
 """
 
-from datetime import date, time
+from datetime import date, time, datetime
 
 from pydantic import BaseModel, Field
+
+from app.enum.schedule_status import ScheduleStatus
 
 
 # ---------------------------------------------------------------------------
@@ -50,15 +52,21 @@ class ScheduleResponse(BaseModel):
     """Resposta de um agendamento: expõe só campos seguros."""
 
     id: int
-    # Pydantic serializa datetime.date para "YYYY-MM-DD" automaticamente.
     date: date
-    # Pydantic serializa datetime.time para "HH:MM:SS" automaticamente.
     time: time
-    # Dados do cliente final aninhados — sem expor customer_id interno.
+    status: ScheduleStatus
+    created_at: datetime
+    updated_at: datetime
     customer: CustomerResponse
     professional: ProfessionalSummaryResponse | None = None
 
     model_config = {"from_attributes": True}
+
+
+class ScheduleStatusUpdate(BaseModel):
+    """Payload para atualizar apenas o status de um agendamento."""
+
+    status: ScheduleStatus
 
 
 class ScheduleSuggestionRequest(BaseModel):

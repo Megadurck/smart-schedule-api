@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 
 from app.core.dependencies import get_customer_repo
 from app.repositories.customer_repository import CustomerRepository
@@ -10,8 +10,12 @@ router = APIRouter(prefix="/customers", tags=["Customers"])
 
 
 @router.get("/", response_model=list[CustomerRecord])
-def list_customers(repo: CustomerRepository = Depends(get_customer_repo)):
-    return customer_service.list_customers(repo)
+def list_customers(
+    repo: CustomerRepository = Depends(get_customer_repo),
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=20, ge=1, le=100),
+):
+    return customer_service.list_customers(repo, skip=skip, limit=limit)
 
 
 @router.get("/{customer_id}", response_model=CustomerRecord)

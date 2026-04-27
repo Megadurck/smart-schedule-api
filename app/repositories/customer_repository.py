@@ -34,11 +34,13 @@ class CustomerRepository:
             .one_or_none()
         )
 
-    def list(self) -> list[Customer]:
+    def list(self, skip: int = 0, limit: int = 20) -> list[Customer]:
         return (
             self.db.query(Customer)
             .filter(Customer.company_id == self.company_id)
             .order_by(Customer.name)
+            .offset(skip)
+            .limit(limit)
             .all()
         )
 

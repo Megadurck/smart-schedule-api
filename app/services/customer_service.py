@@ -3,8 +3,8 @@ from fastapi import HTTPException
 from app.repositories.customer_repository import CustomerRepository
 
 
-def list_customers(repo: CustomerRepository):
-    return repo.list()
+def list_customers(repo: CustomerRepository, skip: int = 0, limit: int = 20):
+    return repo.list(skip=skip, limit=limit)
 
 
 def get_customer(repo: CustomerRepository, customer_id: int):

@@ -130,6 +130,40 @@ def test_read_nonexistent_schedule():
     assert response.status_code == 404
 
 
+def test_schedule_response_has_timestamps():
+    headers = get_auth_headers("empresa_schedule")
+    data = create_schedule(headers=headers)
+    assert "created_at" in data
+    assert "updated_at" in data
+    assert data["created_at"] is not None
+    assert data["updated_at"] is not None
+
+
+def test_list_schedules_pagination_limit():
+    headers = get_auth_headers("empresa_schedule")
+    for _ in range(3):
+        create_schedule(headers=headers)
+    response = client.get("/api/v1/schedule/?limit=2", headers=headers)
+    assert response.status_code == 200
+    assert len(response.json()) <= 2
+
+
+def test_list_schedules_pagination_skip():
+    headers = get_auth_headers("empresa_schedule")
+    for _ in range(3):
+        create_schedule(headers=headers)
+    all_response = client.get("/api/v1/schedule/?limit=100", headers=headers)
+    skip_response = client.get("/api/v1/schedule/?skip=1&limit=100", headers=headers)
+    assert skip_response.status_code == 200
+    assert len(skip_response.json()) == len(all_response.json()) - 1
+
+
+def test_list_schedules_pagination_invalid_limit():
+    headers = get_auth_headers("empresa_schedule")
+    response = client.get("/api/v1/schedule/?limit=0", headers=headers)
+    assert response.status_code == 422
+
+
 def test_list_schedules():
     headers = get_auth_headers("empresa_schedule")
     create_schedule(headers=headers)
@@ -144,6 +178,7 @@ def test_list_schedules():
         assert "customer" in item
         assert "date" in item
         assert "time" in item
+        assert "status" in item
 
 
 def test_create_schedule_invalid_format():
@@ -298,3 +333,54 @@ def test_schedule_isolated_between_companies():
 
     assert response_a.status_code == 201
     assert response_b.status_code == 201
+
+
+def test_schedule_default_status_is_pending():
+    headers = get_auth_headers("empresa_schedule")
+    data = create_schedule(headers=headers)
+    assert data["status"] == "pending"
+
+
+def test_update_schedule_status_to_confirmed():
+    headers = get_auth_headers("empresa_schedule")
+    created = create_schedule(headers=headers)
+    response = client.patch(
+        f"/api/v1/schedule/{created['id']}/status",
+        json={"status": "confirmed"},
+        headers=headers,
+    )
+    assert response.status_code == 200
+    assert response.json()["status"] == "confirmed"
+
+
+def test_update_schedule_status_to_cancelled():
+    headers = get_auth_headers("empresa_schedule")
+    created = create_schedule(headers=headers)
+    response = client.patch(
+        f"/api/v1/schedule/{created['id']}/status",
+        json={"status": "cancelled"},
+        headers=headers,
+    )
+    assert response.status_code == 200
+    assert response.json()["status"] == "cancelled"
+
+
+def test_update_schedule_status_invalid_value():
+    headers = get_auth_headers("empresa_schedule")
+    created = create_schedule(headers=headers)
+    response = client.patch(
+        f"/api/v1/schedule/{created['id']}/status",
+        json={"status": "inexistente"},
+        headers=headers,
+    )
+    assert response.status_code == 422
+
+
+def test_update_schedule_status_not_found():
+    headers = get_auth_headers("empresa_schedule")
+    response = client.patch(
+        "/api/v1/schedule/99999/status",
+        json={"status": "confirmed"},
+        headers=headers,
+    )
+    assert response.status_code == 404
