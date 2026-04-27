@@ -23,11 +23,12 @@ def get_customer_by_name(db: Session, name: str, company_id: int) -> Customer | 
     )
 
 
-def get_customer(db: Session, customer_id: int, company_id: int | None = None) -> Customer | None:
-    query = db.query(Customer).filter(Customer.id == customer_id)
-    if company_id is not None:
-        query = query.filter(Customer.company_id == company_id)
-    return query.first()
+def get_customer(db: Session, customer_id: int, company_id: int) -> Customer | None:
+    return (
+        db.query(Customer)
+        .filter(Customer.id == customer_id, Customer.company_id == company_id)
+        .first()
+    )
 
 
 def list_customers(db: Session, company_id: int) -> list[Customer]:

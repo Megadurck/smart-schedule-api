@@ -43,11 +43,11 @@ def create_schedule(
     db.commit()
     db.refresh(new_schedule)
 
-    # Reload with relationship
+    # Reload with relationship — sempre filtra por company_id para garantir isolamento
     return (
         db.query(Schedule)
         .options(joinedload(Schedule.customer), joinedload(Schedule.professional))
-        .filter(Schedule.id == new_schedule.id)
+        .filter(Schedule.id == new_schedule.id, Schedule.company_id == company_id)
         .first()
     )
 
@@ -82,7 +82,7 @@ def update_schedule(
     return (
         db.query(Schedule)
         .options(joinedload(Schedule.customer), joinedload(Schedule.professional))
-        .filter(Schedule.id == schedule.id)
+        .filter(Schedule.id == schedule.id, Schedule.company_id == company_id)
         .first()
     )
 
