@@ -2,6 +2,7 @@ from collections import defaultdict
 from datetime import datetime, time, date as date_type, timedelta
 
 from fastapi import HTTPException
+from sqlalchemy.exc import IntegrityError
 
 from app.models.working_hours_model import WorkingHours
 
@@ -81,12 +82,15 @@ def create_schedule(
     customer = bundle.customers.find_or_create(customer_name)
     professional = _get_professional_or_none(bundle.professionals, professional_id)
 
-    return bundle.schedules.create(
-        customer.id,
-        professional.id if professional else None,
-        schedule_date,
-        schedule_time,
-    )
+    try:
+        return bundle.schedules.create(
+            customer.id,
+            professional.id if professional else None,
+            schedule_date,
+            schedule_time,
+        )
+    except IntegrityError:
+        raise HTTPException(status_code=409, detail="Horário já ocupado")
 
 
 def update_schedule(

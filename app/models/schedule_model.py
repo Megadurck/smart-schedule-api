@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, ForeignKey, Date, Time, Enum as SAEnum, DateTime
+from sqlalchemy import Column, Integer, ForeignKey, Date, Time, Enum as SAEnum, DateTime, Index, text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -30,3 +30,26 @@ class Schedule(Base):
     customer = relationship("Customer", back_populates="schedules")
     company = relationship("Company", back_populates="schedules")
     professional = relationship("Professional", back_populates="schedules")
+
+    __table_args__ = (
+        # Índice 1: bloqueia duplicidade quando professional_id é informado
+        Index(
+            "uq_schedule_active_with_professional",
+            "company_id", "professional_id", "date", "time",
+            unique=True,
+            postgresql_where=text(
+                "status IN ('pending', 'confirmed') AND professional_id IS NOT NULL"
+            ),
+        ),
+        # Índice 2: bloqueia duplicidade quando professional_id é NULL
+        Index(
+            "uq_schedule_active_no_professional",
+            "company_id", "date", "time",
+            unique=True,
+            postgresql_where=text(
+                "status IN ('pending', 'confirmed') AND professional_id IS NULL"
+            ),
+        ),
+        # Índice auxiliar de performance para consultas por empresa/data/hora
+        Index("ix_schedule_company_date_time", "company_id", "date", "time"),
+    )

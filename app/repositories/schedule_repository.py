@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
 from app.models.schedule_model import Schedule
+from app.enum.schedule_status import ScheduleStatus
 
 
 class ScheduleRepository:
@@ -44,7 +46,11 @@ class ScheduleRepository:
             time=schedule_time,
         )
         self.db.add(new_schedule)
-        self.db.commit()
+        try:
+            self.db.commit()
+        except IntegrityError:
+            self.db.rollback()
+            raise
         self.db.refresh(new_schedule)
         return (
             self.db.query(Schedule)
@@ -99,10 +105,12 @@ class ScheduleRepository:
         schedule_time,
         exclude_id: int | None = None,
     ) -> bool:
+        active_statuses = (ScheduleStatus.PENDING, ScheduleStatus.CONFIRMED)
         query = self.db.query(Schedule).filter(
             Schedule.company_id == self.company_id,
             Schedule.date == schedule_date,
             Schedule.time == schedule_time,
+            Schedule.status.in_(active_statuses),
         )
         if exclude_id is not None:
             query = query.filter(Schedule.id != exclude_id)
