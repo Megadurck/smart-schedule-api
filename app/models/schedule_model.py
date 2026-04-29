@@ -32,23 +32,13 @@ class Schedule(Base):
     professional = relationship("Professional", back_populates="schedules")
 
     __table_args__ = (
-        # Índice 1: bloqueia duplicidade quando professional_id é informado
+        # Regra de concorrência: para status ativos, não pode haver dois agendamentos no mesmo slot da empresa.
         Index(
-            "uq_schedule_active_with_professional",
-            "company_id", "professional_id", "date", "time",
-            unique=True,
-            postgresql_where=text(
-                "status IN ('pending', 'confirmed') AND professional_id IS NOT NULL"
-            ),
-        ),
-        # Índice 2: bloqueia duplicidade quando professional_id é NULL
-        Index(
-            "uq_schedule_active_no_professional",
+            "uq_schedule_active_company_slot",
             "company_id", "date", "time",
             unique=True,
-            postgresql_where=text(
-                "status IN ('pending', 'confirmed') AND professional_id IS NULL"
-            ),
+            postgresql_where=text("status IN ('pending', 'confirmed')"),
+            sqlite_where=text("status IN ('pending', 'confirmed')"),
         ),
         # Índice auxiliar de performance para consultas por empresa/data/hora
         Index("ix_schedule_company_date_time", "company_id", "date", "time"),

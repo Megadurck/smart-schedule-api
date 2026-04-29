@@ -54,3 +54,32 @@ def ensure_company_admin_columns():
                     "ALTER TABLE companies ADD COLUMN reminder_lead_minutes INTEGER NOT NULL DEFAULT 120"
                 )
             )
+
+
+def ensure_schedule_constraints():
+    """Garante índices de conflito de agenda alinhados à regra de negócio."""
+    with engine.begin() as conn:
+        # Remove índices legados para evitar comportamento inconsistente.
+        conn.execute(text("DROP INDEX IF EXISTS uq_schedule_active_with_professional"))
+        conn.execute(text("DROP INDEX IF EXISTS uq_schedule_active_no_professional"))
+
+        # Bloqueia concorrência de slots ativos no mesmo horário por empresa.
+        conn.execute(
+            text(
+                """
+                CREATE UNIQUE INDEX IF NOT EXISTS uq_schedule_active_company_slot
+                ON schedules(company_id, date, time)
+                WHERE status IN ('pending', 'confirmed')
+                """
+            )
+        )
+
+        # Mantém índice de consulta.
+        conn.execute(
+            text(
+                """
+                CREATE INDEX IF NOT EXISTS ix_schedule_company_date_time
+                ON schedules(company_id, date, time)
+                """
+            )
+        )
