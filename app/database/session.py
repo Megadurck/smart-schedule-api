@@ -1,4 +1,5 @@
 from sqlalchemy import create_engine
+from sqlalchemy import text
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import sessionmaker
 
@@ -29,3 +30,27 @@ def get_db():
 def ensure_auth_columns():
     """Mantido por compatibilidade com o bootstrap atual."""
     return None
+
+
+def ensure_company_admin_columns():
+    """Garante colunas administrativas da tabela companies em bases legadas."""
+    with engine.begin() as conn:
+        rows = conn.execute(text("PRAGMA table_info(companies)")).fetchall()
+        existing_columns = {row[1] for row in rows}
+
+        if "display_name" not in existing_columns:
+            conn.execute(text("ALTER TABLE companies ADD COLUMN display_name VARCHAR"))
+        if "cancellation_policy" not in existing_columns:
+            conn.execute(text("ALTER TABLE companies ADD COLUMN cancellation_policy TEXT"))
+        if "default_timezone" not in existing_columns:
+            conn.execute(
+                text(
+                    "ALTER TABLE companies ADD COLUMN default_timezone VARCHAR NOT NULL DEFAULT 'America/Sao_Paulo'"
+                )
+            )
+        if "reminder_lead_minutes" not in existing_columns:
+            conn.execute(
+                text(
+                    "ALTER TABLE companies ADD COLUMN reminder_lead_minutes INTEGER NOT NULL DEFAULT 120"
+                )
+            )

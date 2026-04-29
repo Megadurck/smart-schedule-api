@@ -20,6 +20,7 @@ from app.schemas.auth import (
     TokenResponse,
     AccessTokenResponse,
 )
+from app.schemas.company_admin import CompanyAdminSettingsResponse, CompanyAdminSettingsUpdate
 
 __all__ = [
     "ScheduleCreate",
@@ -43,5 +44,7 @@ __all__ = [
     "RefreshTokenRequest",
     "TokenResponse",
     "AccessTokenResponse",
+    "CompanyAdminSettingsResponse",
+    "CompanyAdminSettingsUpdate",
 ]
 

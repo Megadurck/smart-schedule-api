@@ -7,6 +7,8 @@
 <p align="center">
   <img alt="Python" src="https://img.shields.io/badge/python-3.13+-blue.svg">
   <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-0.129.2-009688.svg">
+  <img alt="React" src="https://img.shields.io/badge/React-19-61DAFB.svg">
+  <img alt="Vite" src="https://img.shields.io/badge/Vite-8-646CFF.svg">
   <img alt="SQLAlchemy" src="https://img.shields.io/badge/SQLAlchemy-2.0.47-D71F00.svg">
   <img alt="Pytest" src="https://img.shields.io/badge/tests-68%20passed-0A9EDC.svg">
   <img alt="License" src="https://img.shields.io/badge/license-MIT-green.svg">
@@ -160,6 +162,19 @@ Fluxo do agente:
 
 ```text
 smart-schedule-api/
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   │   └── ui/
+│   │   ├── contexts/
+│   │   ├── pages/
+│   │   ├── services/
+│   │   ├── App.tsx
+│   │   ├── index.css
+│   │   └── main.tsx
+│   ├── public/
+│   ├── package.json
+│   └── vite.config.ts
 ├── agent/
 │   ├── agent.py
 │   ├── config.py
@@ -214,6 +229,61 @@ Principais componentes da aplicação:
 - pytest
 - httpx
 - uvicorn
+
+Frontend:
+
+- React + TypeScript
+- Vite
+- Tailwind CSS v4
+- shadcn/ui
+- React Router DOM
+- Axios
+- React Hook Form + Zod
+
+## Frontend (React)
+
+O projeto agora possui uma aplicação React para operação administrativa da empresa.
+
+### Páginas atuais
+
+- `frontend/src/pages/LoginPage.tsx`
+- `frontend/src/pages/RegisterPage.tsx`
+- `frontend/src/pages/DashboardPage.tsx`
+- `frontend/src/pages/CompanyAdminPage.tsx`
+- `frontend/src/pages/WorkingHoursPage.tsx`
+- `frontend/src/pages/ProfessionalsPage.tsx`
+- `frontend/src/pages/CustomersPage.tsx`
+- `frontend/src/pages/SchedulesPage.tsx`
+- `frontend/src/pages/AgentSettingsPage.tsx`
+
+### Navegação e regras do front-end
+
+- Rotas e proteção de acesso: `frontend/src/App.tsx`
+- Layout autenticado e menu lateral: `frontend/src/components/AppShell.tsx`
+- Estado de autenticação e sessão: `frontend/src/contexts/AuthContext.tsx`
+- Cliente HTTP, token e refresh automático: `frontend/src/services/api.ts`
+
+### Estilo global
+
+- Estilo global principal: `frontend/src/index.css`
+- O Tailwind e os tokens do tema ficam centralizados nesse arquivo.
+
+### Onde colocar fotos/imagens
+
+- Arquivos públicos estáticos (URL direta): `frontend/public/`
+- Imagens importadas por componente: `frontend/src/assets/`
+
+Exemplos:
+
+- `frontend/public/logo.png` → usar com `src="/logo.png"`
+- `frontend/src/assets/hero.jpg` → importar no componente
+
+### Funcionalidades administrativas já no front
+
+- Administração da empresa com persistência no banco (`/company-admin`)
+- Horário de funcionamento e slots (`/working-hours`)
+- CRUD de profissionais e clientes (incluindo exclusão)
+- Gestão de agendamentos (criação, status, exclusão, sugestões)
 
 ## Como Rodar
 
@@ -287,13 +357,25 @@ uvicorn app.main:app --reload
 
 A raiz `/` redireciona para `/docs`.
 
-### 6. Resetar o banco local
+### 6. Subir o Frontend
+
+Em outro terminal:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Frontend local: `http://localhost:5173`
+
+### 7. Resetar o banco local
 
 ```bash
 python reset_db.py
 ```
 
-### 7. Rodar o agente local
+### 8. Rodar o agente local
 
 ```bash
 python -m agent.agent
@@ -379,6 +461,11 @@ Base path: `/api/v1`
 - `POST /professionals/`
 - `PUT /professionals/{professional_id}`
 - `DELETE /professionals/{professional_id}`
+
+### Company Admin
+
+- `GET /company-admin/`
+- `PUT /company-admin/`
 
 ### Paginação
 

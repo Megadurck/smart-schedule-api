@@ -3,7 +3,7 @@ from fastapi.responses import RedirectResponse
 from contextlib import asynccontextmanager
 from app.api.v1 import api_router
 
-from app.database.session import engine, Base, ensure_auth_columns
+from app.database.session import engine, Base, ensure_auth_columns, ensure_company_admin_columns
 from app.models.company import Company
 from app.models.customer import Customer
 from app.models.professional import Professional
@@ -16,6 +16,7 @@ async def lifespan(app: FastAPI):
     # Startup: Criar tabelas do banco
     Base.metadata.create_all(bind=engine)
     ensure_auth_columns()
+    ensure_company_admin_columns()
     yield
     # Shutdown: (nada por enquanto)
 

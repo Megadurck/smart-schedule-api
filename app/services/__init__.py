@@ -6,3 +6,4 @@ from . import auth_service
 from . import customer_service
 from . import professional_service
 from . import working_hours_service
+from . import company_admin_service
