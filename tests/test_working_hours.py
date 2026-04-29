@@ -273,14 +273,18 @@ class TestScheduleWithWorkingHours:
             headers=self.headers,
         )
 
-        response = client.get("/api/v1/working-hours/slots/0", headers=self.headers)
+        response = client.get("/api/v1/working-hours/slots", params={"date": "02/03/2026"}, headers=self.headers)
         assert response.status_code == 200
         data = response.json()
         assert data["weekday"] == 0
+        assert data["date"] == "02/03/2026"
         assert data["available_slots"] == 16
         assert data["total_available_minutes"] == 480
         assert data["slot_duration_minutes"] == 30
+        assert data["lunch_duration_minutes"] == 120
         assert data["total_lunch_minutes"] == 120
+        assert data["booked_slots"] == 0
+        assert data["total_slots"] == 16
 
     def test_available_slots_custom_duration(self):
         client.post(
@@ -296,12 +300,15 @@ class TestScheduleWithWorkingHours:
             headers=self.headers,
         )
 
-        response = client.get("/api/v1/working-hours/slots/5", headers=self.headers)
+        response = client.get("/api/v1/working-hours/slots", params={"date": "07/03/2026"}, headers=self.headers)
         assert response.status_code == 200
         data = response.json()
         assert data["available_slots"] == 7
         assert data["slot_duration_minutes"] == 60
+        assert data["lunch_duration_minutes"] == 60
         assert data["total_lunch_minutes"] == 60
+        assert data["booked_slots"] == 0
+        assert data["total_slots"] == 7
 
     def test_available_slots_no_lunch(self):
         client.post(
@@ -317,17 +324,92 @@ class TestScheduleWithWorkingHours:
             headers=self.headers,
         )
 
-        response = client.get("/api/v1/working-hours/slots/6", headers=self.headers)
+        response = client.get("/api/v1/working-hours/slots", params={"date": "08/03/2026"}, headers=self.headers)
         assert response.status_code == 200
         data = response.json()
         assert data["available_slots"] == 12
         assert data["total_available_minutes"] == 360
+        assert data["lunch_duration_minutes"] == 0
+        assert data["booked_slots"] == 0
+        assert data["total_slots"] == 12
 
     def test_available_slots_no_working_hours(self):
-        response = client.get("/api/v1/working-hours/slots/6", headers=self.headers)
+        response = client.get("/api/v1/working-hours/slots", params={"date": "08/03/2026"}, headers=self.headers)
         assert response.status_code == 200
         data = response.json()
+        assert data["date"] == "08/03/2026"
+        assert data["weekday"] == 6
         assert data["available_slots"] == 0
+
+    def test_available_slots_subtracts_booked_active_schedules(self):
+        client.post(
+            "/api/v1/working-hours/",
+            json={
+                "weekday": 3,
+                "start_time": "08:00:00",
+                "end_time": "18:00:00",
+                "slot_duration_minutes": 30,
+                "lunch_start": "12:00:00",
+                "lunch_end": "13:00:00",
+            },
+            headers=self.headers,
+        )
+
+        for payload in [
+            {"customer_name": "Cliente 1", "date": "30/04/2026", "time": "08:00:00"},
+            {"customer_name": "Cliente 2", "date": "30/04/2026", "time": "08:30:00"},
+        ]:
+            response = client.post("/api/v1/schedule/", json=payload, headers=self.headers)
+            assert response.status_code == 201
+
+        response = client.get("/api/v1/working-hours/slots", params={"date": "30/04/2026"}, headers=self.headers)
+        assert response.status_code == 200
+        data = response.json()
+        assert data["weekday"] == 3
+        assert data["total_slots"] == 18
+        assert data["booked_slots"] == 2
+        assert data["available_slots"] == 16
+        assert data["total_available_minutes"] == 480
+
+    def test_available_slots_ignores_cancelled_schedule(self):
+        client.post(
+            "/api/v1/working-hours/",
+            json={
+                "weekday": 3,
+                "start_time": "08:00:00",
+                "end_time": "18:00:00",
+                "slot_duration_minutes": 30,
+                "lunch_start": "12:00:00",
+                "lunch_end": "13:00:00",
+            },
+            headers=self.headers,
+        )
+
+        created = client.post(
+            "/api/v1/schedule/",
+            json={"customer_name": "Cliente Cancelado", "date": "30/04/2026", "time": "08:00:00"},
+            headers=self.headers,
+        )
+        assert created.status_code == 201
+
+        cancelled = client.patch(
+            f"/api/v1/schedule/{created.json()['id']}/status",
+            json={"status": "cancelled"},
+            headers=self.headers,
+        )
+        assert cancelled.status_code == 200
+
+        response = client.get("/api/v1/working-hours/slots", params={"date": "30/04/2026"}, headers=self.headers)
+        assert response.status_code == 200
+        data = response.json()
+        assert data["booked_slots"] == 0
+        assert data["available_slots"] == 18
+        assert data["total_available_minutes"] == 540
+
+    def test_available_slots_invalid_date_format(self):
+        response = client.get("/api/v1/working-hours/slots", params={"date": "2026-03-02"}, headers=self.headers)
+        assert response.status_code == 400
+        assert response.json()["detail"] == "Formato de data inválido. Use DD/MM/YYYY"
 
 
 def test_set_working_hours_requires_token():

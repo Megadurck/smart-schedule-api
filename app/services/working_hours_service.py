@@ -1,5 +1,6 @@
-from datetime import time
+from datetime import datetime, time
 
+from app.repositories.schedule_repository import ScheduleRepository
 from app.repositories.working_hours_repository import WorkingHoursRepository
 from app.enum.weekday import Weekday
 
@@ -41,37 +42,58 @@ def is_within_working_hours(
     return wh.start_time <= schedule_time <= wh.end_time
 
 
-def calculate_available_slots(repo: WorkingHoursRepository, weekday: int) -> dict:
+def _time_to_minutes(value: time) -> int:
+    return value.hour * 60 + value.minute
+
+
+def _parse_date(value: str):
+    return datetime.strptime(value, "%d/%m/%Y").date()
+
+
+def calculate_available_slots_for_date(
+    repo: WorkingHoursRepository,
+    schedule_repo: ScheduleRepository,
+    date_str: str,
+) -> dict:
+    requested_date = _parse_date(date_str)
+    weekday = requested_date.weekday()
     wh = repo.get_active_by_weekday(weekday)
+
     if not wh:
         return {
+            "date": date_str,
             "weekday": int(weekday),
             "available_slots": 0,
-            "total_time_minutes": 0,
+            "total_available_minutes": 0,
             "lunch_duration_minutes": 0,
+            "slot_duration_minutes": 0,
         }
 
-    def time_to_minutes(t: time) -> int:
-        return t.hour * 60 + t.minute
-
-    start_minutes = time_to_minutes(wh.start_time)
-    end_minutes = time_to_minutes(wh.end_time)
+    start_minutes = _time_to_minutes(wh.start_time)
+    end_minutes = _time_to_minutes(wh.end_time)
     lunch_duration = 0
     if wh.lunch_start and wh.lunch_end:
-        lunch_duration = time_to_minutes(wh.lunch_end) - time_to_minutes(wh.lunch_start)
+        lunch_duration = _time_to_minutes(wh.lunch_end) - _time_to_minutes(wh.lunch_start)
 
     total_time = end_minutes - start_minutes - lunch_duration
     slot_duration = wh.slot_duration_minutes
-    available_slots = total_time // slot_duration if slot_duration > 0 else 0
+    total_slots = total_time // slot_duration if slot_duration > 0 else 0
+    booked_slots = schedule_repo.count_active_by_date(requested_date)
+    available_slots = max(total_slots - booked_slots, 0)
+    remaining_available_minutes = available_slots * slot_duration if slot_duration > 0 else 0
 
     return {
+        "date": date_str,
         "weekday": int(weekday),
         "start_time": str(wh.start_time),
         "end_time": str(wh.end_time),
         "lunch_start": str(wh.lunch_start) if wh.lunch_start else None,
         "lunch_end": str(wh.lunch_end) if wh.lunch_end else None,
         "slot_duration_minutes": slot_duration,
-        "total_available_minutes": total_time,
+        "total_available_minutes": remaining_available_minutes,
+        "lunch_duration_minutes": lunch_duration,
         "total_lunch_minutes": lunch_duration,
+        "total_slots": total_slots,
+        "booked_slots": booked_slots,
         "available_slots": available_slots,
     }

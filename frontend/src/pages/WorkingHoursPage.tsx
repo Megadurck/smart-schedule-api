@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { MaskedDateInput, MaskedTimeInput } from '@/components/ui/masked-input'
 
 type WorkingHours = {
   id: number
@@ -17,6 +18,7 @@ type WorkingHours = {
 }
 
 type AvailableSlots = {
+  date: string
   weekday: number
   available_slots: number
   total_available_minutes: number
@@ -41,6 +43,7 @@ export default function WorkingHoursPage() {
   const [slotInfo, setSlotInfo] = useState<AvailableSlots | null>(null)
 
   const [weekday, setWeekday] = useState('0')
+  const [slotDate, setSlotDate] = useState('')
   const [startTime, setStartTime] = useState('08:00:00')
   const [endTime, setEndTime] = useState('18:00:00')
   const [slotDuration, setSlotDuration] = useState('30')
@@ -59,6 +62,14 @@ export default function WorkingHoursPage() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+
+    const hasCompleteBusinessHours = startTime.length === 8 && endTime.length === 8
+    const hasCompleteLunchHours = (!lunchStart && !lunchEnd) || (lunchStart.length === 8 && lunchEnd.length === 8)
+    if (!hasCompleteBusinessHours || !hasCompleteLunchHours) {
+      setError('Preencha os horários no formato completo HH:MM:SS.')
+      return
+    }
+
     setSaving(true)
     try {
       await api.post('/working-hours/', {
@@ -79,8 +90,17 @@ export default function WorkingHoursPage() {
 
   const checkSlots = async () => {
     setError('')
+
+    if (slotDate.length !== 10) {
+      setSlotInfo(null)
+      setError('Informe uma data completa para consultar os slots.')
+      return
+    }
+
     try {
-      const { data } = await api.get<AvailableSlots>(`/working-hours/slots/${weekday}`)
+      const { data } = await api.get<AvailableSlots>('/working-hours/slots', {
+        params: { date: slotDate },
+      })
       setSlotInfo(data)
     } catch {
       setSlotInfo(null)
@@ -118,12 +138,22 @@ export default function WorkingHoursPage() {
 
             <div className="space-y-1">
               <Label htmlFor="startTime">Início</Label>
-              <Input id="startTime" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+              <MaskedTimeInput
+                id="startTime"
+                includeSeconds
+                onValueChange={setStartTime}
+                value={startTime}
+              />
             </div>
 
             <div className="space-y-1">
               <Label htmlFor="endTime">Fim</Label>
-              <Input id="endTime" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+              <MaskedTimeInput
+                id="endTime"
+                includeSeconds
+                onValueChange={setEndTime}
+                value={endTime}
+              />
             </div>
 
             <div className="space-y-1">
@@ -139,21 +169,21 @@ export default function WorkingHoursPage() {
 
             <div className="space-y-1">
               <Label htmlFor="lunchStart">Início almoço</Label>
-              <Input
+              <MaskedTimeInput
                 id="lunchStart"
+                includeSeconds
+                onValueChange={setLunchStart}
                 value={lunchStart}
-                onChange={(e) => setLunchStart(e.target.value)}
-                placeholder="12:00:00"
               />
             </div>
 
             <div className="space-y-1">
               <Label htmlFor="lunchEnd">Fim almoço</Label>
-              <Input
+              <MaskedTimeInput
                 id="lunchEnd"
+                includeSeconds
+                onValueChange={setLunchEnd}
                 value={lunchEnd}
-                onChange={(e) => setLunchEnd(e.target.value)}
-                placeholder="13:00:00"
               />
             </div>
 
@@ -161,6 +191,7 @@ export default function WorkingHoursPage() {
               <Button type="submit" disabled={saving}>
                 {saving ? 'Salvando...' : 'Salvar dia'}
               </Button>
+              <MaskedDateInput value={slotDate} onValueChange={setSlotDate} />
               <Button type="button" variant="outline" onClick={checkSlots}>
                 Ver slots
               </Button>
@@ -176,6 +207,7 @@ export default function WorkingHoursPage() {
             <CardTitle>Disponibilidade do dia</CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-slate-700 space-y-1">
+            <p>Data: {slotInfo.date}</p>
             <p>Dia: {weekdayLabel(slotInfo.weekday)}</p>
             <p>Slots disponíveis: {slotInfo.available_slots}</p>
             <p>Minutos disponíveis: {slotInfo.total_available_minutes}</p>

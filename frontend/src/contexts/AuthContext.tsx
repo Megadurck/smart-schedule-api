@@ -2,6 +2,10 @@ import { createContext, useContext, useState, useCallback } from 'react'
 import type { ReactNode } from 'react'
 import { api } from '@/services/api'
 
+const AUTH_USER_KEY = 'user'
+const ACCESS_TOKEN_KEY = 'access_token'
+const REFRESH_TOKEN_KEY = 'refresh_token'
+
 interface AuthUser {
   id: number
   name: string
@@ -20,18 +24,18 @@ const AuthContext = createContext<AuthContextType | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(() => {
-    const stored = localStorage.getItem('user')
+    const stored = sessionStorage.getItem(AUTH_USER_KEY)
     return stored ? (JSON.parse(stored) as AuthUser) : null
   })
 
   const saveTokens = (access_token: string, refresh_token: string) => {
-    localStorage.setItem('access_token', access_token)
-    localStorage.setItem('refresh_token', refresh_token)
+    sessionStorage.setItem(ACCESS_TOKEN_KEY, access_token)
+    sessionStorage.setItem(REFRESH_TOKEN_KEY, refresh_token)
   }
 
   const fetchMe = useCallback(async (): Promise<AuthUser> => {
     const { data } = await api.get<AuthUser>('/auth/me')
-    localStorage.setItem('user', JSON.stringify(data))
+    sessionStorage.setItem(AUTH_USER_KEY, JSON.stringify(data))
     setUser(data)
     return data
   }, [])
@@ -49,7 +53,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const logout = () => {
-    localStorage.clear()
+    sessionStorage.removeItem(AUTH_USER_KEY)
+    sessionStorage.removeItem(ACCESS_TOKEN_KEY)
+    sessionStorage.removeItem(REFRESH_TOKEN_KEY)
     setUser(null)
   }
 

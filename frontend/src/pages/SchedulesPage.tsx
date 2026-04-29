@@ -3,6 +3,7 @@ import { api } from '@/services/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { MaskedDateInput, MaskedTimeInput } from '@/components/ui/masked-input'
 import { Label } from '@/components/ui/label'
 
 type Professional = {
@@ -21,6 +22,7 @@ type Schedule = {
 }
 
 type AvailableSlots = {
+  date: string
   weekday: number
   available_slots: number
   total_available_minutes: number
@@ -56,7 +58,7 @@ export default function SchedulesPage() {
   const [time, setTime] = useState('')
   const [professionalId, setProfessionalId] = useState('')
 
-  const [weekday, setWeekday] = useState('0')
+  const [availabilityDate, setAvailabilityDate] = useState('')
   const [slotInfo, setSlotInfo] = useState<AvailableSlots | null>(null)
 
   const [suggestCustomer, setSuggestCustomer] = useState('')
@@ -83,6 +85,12 @@ export default function SchedulesPage() {
   const handleCreateSchedule = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+
+    if (date.length !== 10 || time.length !== 5) {
+      setError('Preencha a data e a hora completas antes de salvar.')
+      return
+    }
+
     setSaving(true)
     try {
       await api.post('/schedule/', {
@@ -129,8 +137,17 @@ export default function SchedulesPage() {
 
   const checkAvailability = async () => {
     setError('')
+
+    if (availabilityDate.length !== 10) {
+      setSlotInfo(null)
+      setError('Informe uma data completa para consultar disponibilidade.')
+      return
+    }
+
     try {
-      const { data } = await api.get<AvailableSlots>(`/working-hours/slots/${weekday}`)
+      const { data } = await api.get<AvailableSlots>('/working-hours/slots', {
+        params: { date: availabilityDate },
+      })
       setSlotInfo(data)
     } catch {
       setSlotInfo(null)
@@ -177,21 +194,19 @@ export default function SchedulesPage() {
             </div>
             <div className="space-y-1">
               <Label htmlFor="date">Data (DD/MM/AAAA)</Label>
-              <Input
+              <MaskedDateInput
                 id="date"
                 value={date}
-                onChange={(e) => setDate(e.target.value)}
-                placeholder="29/04/2026"
+                onValueChange={setDate}
                 required
               />
             </div>
             <div className="space-y-1">
               <Label htmlFor="time">Hora (HH:MM)</Label>
-              <Input
+              <MaskedTimeInput
                 id="time"
                 value={time}
-                onChange={(e) => setTime(e.target.value)}
-                placeholder="09:30"
+                onValueChange={setTime}
                 required
               />
             </div>
@@ -225,23 +240,15 @@ export default function SchedulesPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex gap-3">
-              <select
-                className="h-9 rounded-md border px-3 text-sm bg-white"
-                value={weekday}
-                onChange={(e) => setWeekday(e.target.value)}
-              >
-                {weekdays.map((day) => (
-                  <option key={day.value} value={day.value}>
-                    {day.label}
-                  </option>
-                ))}
-              </select>
+              <MaskedDateInput value={availabilityDate} onValueChange={setAvailabilityDate} />
               <Button variant="outline" onClick={checkAvailability}>
                 Consultar
               </Button>
             </div>
             {slotInfo && (
               <div className="rounded-md border p-3 text-sm text-slate-700 space-y-1">
+                <p>Data: {slotInfo.date}</p>
+                <p>Dia da semana: {weekdays.find((day) => day.value === slotInfo.weekday)?.label}</p>
                 <p>Slots disponíveis: {slotInfo.available_slots}</p>
                 <p>Minutos disponíveis: {slotInfo.total_available_minutes}</p>
                 <p>Duração por slot: {slotInfo.slot_duration_minutes} min</p>

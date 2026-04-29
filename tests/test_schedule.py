@@ -52,6 +52,16 @@ def create_schedule(headers=None):
     return response.json()
 
 
+def create_professional(headers, name: str):
+    response = client.post(
+        "/api/v1/professionals/",
+        json={"name": name, "is_active": True},
+        headers=headers,
+    )
+    assert response.status_code == 201
+    return response.json()
+
+
 def test_create_schedule():
     data = create_schedule()
     assert data["id"] is not None
@@ -215,6 +225,72 @@ def test_update_schedule_conflict():
     response = client.put(f"/api/v1/schedule/{b2['id']}", json=payload, headers=headers)
     assert response.status_code == 409
     assert response.json()["detail"] == "Horário já ocupado"
+
+
+def test_schedule_allows_same_time_for_different_professionals():
+    headers = get_auth_headers("empresa_schedule_prof")
+    for weekday in range(5):
+        response = client.post(
+            "/api/v1/working-hours/",
+            json={"weekday": weekday, "start_time": "08:00:00", "end_time": "18:00:00"},
+            headers=headers,
+        )
+        assert response.status_code == 201
+
+    professional_a = create_professional(headers, "Profissional A")
+    professional_b = create_professional(headers, "Profissional B")
+
+    first = {
+        "customer_name": "Cliente A",
+        "date": "27/02/2026",
+        "time": "15:00:00",
+        "professional_id": professional_a["id"],
+    }
+    second = {
+        "customer_name": "Cliente B",
+        "date": "27/02/2026",
+        "time": "15:00:00",
+        "professional_id": professional_b["id"],
+    }
+
+    response1 = client.post("/api/v1/schedule/", json=first, headers=headers)
+    response2 = client.post("/api/v1/schedule/", json=second, headers=headers)
+
+    assert response1.status_code == 201
+    assert response2.status_code == 201
+
+
+def test_schedule_blocks_same_time_for_same_professional():
+    headers = get_auth_headers("empresa_schedule_same_prof")
+    for weekday in range(5):
+        response = client.post(
+            "/api/v1/working-hours/",
+            json={"weekday": weekday, "start_time": "08:00:00", "end_time": "18:00:00"},
+            headers=headers,
+        )
+        assert response.status_code == 201
+
+    professional = create_professional(headers, "Profissional X")
+
+    first = {
+        "customer_name": "Cliente A",
+        "date": "27/02/2026",
+        "time": "16:00:00",
+        "professional_id": professional["id"],
+    }
+    second = {
+        "customer_name": "Cliente B",
+        "date": "27/02/2026",
+        "time": "16:00:00",
+        "professional_id": professional["id"],
+    }
+
+    response1 = client.post("/api/v1/schedule/", json=first, headers=headers)
+    response2 = client.post("/api/v1/schedule/", json=second, headers=headers)
+
+    assert response1.status_code == 201
+    assert response2.status_code == 409
+    assert response2.json()["detail"] == "Horário já ocupado"
 
 
 def test_schedule_conflict():

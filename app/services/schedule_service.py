@@ -69,8 +69,13 @@ def create_schedule(
     professional_id: int | None = None,
 ):
     schedule_date, schedule_time = parse_date_time(date_str, time_str)
+    professional = _get_professional_or_none(bundle.professionals, professional_id)
 
-    if bundle.schedules.check_conflict(schedule_date, schedule_time):
+    if bundle.schedules.check_conflict(
+        schedule_date,
+        schedule_time,
+        professional.id if professional else None,
+    ):
         raise HTTPException(status_code=409, detail="Horário já ocupado")
 
     if not _is_within_working_hours(bundle.working_hours, schedule_date, schedule_time):
@@ -80,7 +85,6 @@ def create_schedule(
         )
 
     customer = bundle.customers.find_or_create(customer_name)
-    professional = _get_professional_or_none(bundle.professionals, professional_id)
 
     try:
         return bundle.schedules.create(
@@ -102,8 +106,14 @@ def update_schedule(
     professional_id: int | None = None,
 ):
     schedule_date, schedule_time = parse_date_time(date_str, time_str)
+    professional = _get_professional_or_none(bundle.professionals, professional_id)
 
-    if bundle.schedules.check_conflict(schedule_date, schedule_time, exclude_id=schedule_id):
+    if bundle.schedules.check_conflict(
+        schedule_date,
+        schedule_time,
+        professional.id if professional else None,
+        exclude_id=schedule_id,
+    ):
         raise HTTPException(status_code=409, detail="Horário já ocupado")
 
     if not _is_within_working_hours(bundle.working_hours, schedule_date, schedule_time):
@@ -113,7 +123,6 @@ def update_schedule(
         )
 
     customer = bundle.customers.find_or_create(customer_name)
-    professional = _get_professional_or_none(bundle.professionals, professional_id)
 
     schedule = bundle.schedules.update(
         schedule_id,
@@ -244,7 +253,7 @@ def suggest_schedules(
             if pair not in seen_pairs:
                 is_available = (
                     _is_within_working_hours(bundle.working_hours, candidate_date, preferred_time)
-                    and not bundle.schedules.check_conflict(candidate_date, preferred_time)
+                    and not bundle.schedules.check_conflict(candidate_date, preferred_time, None)
                 )
                 if is_available:
                     seen_pairs.add(pair)
@@ -270,7 +279,7 @@ def suggest_schedules(
                 if pair in seen_pairs:
                     continue
 
-                if not bundle.schedules.check_conflict(current_date, slot):
+                if not bundle.schedules.check_conflict(current_date, slot, None):
                     seen_pairs.add(pair)
                     suggestions.append(
                         {

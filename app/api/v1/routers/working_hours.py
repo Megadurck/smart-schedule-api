@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from datetime import time as time_type
 
-from app.core.dependencies import get_working_hours_repo
+from app.core.dependencies import get_schedule_repo, get_working_hours_repo
+from app.repositories.schedule_repository import ScheduleRepository
 from app.repositories.working_hours_repository import WorkingHoursRepository
 from app.services import working_hours_service
 from app.enum.weekday import Weekday
@@ -46,15 +47,17 @@ def set_working_hours(
 
 
 # 🔹 CALCULAR SLOTS DISPONÍVEIS
-@router.get("/slots/{weekday}")
+@router.get("/slots")
 def get_available_slots(
-    weekday: Weekday,
+    date: str = Query(..., description="Data no formato DD/MM/YYYY"),
     repo: WorkingHoursRepository = Depends(get_working_hours_repo),
+    schedule_repo: ScheduleRepository = Depends(get_schedule_repo),
 ):
-    """Calcula quantos slots de atendimento estão disponíveis para um dia
+    """Calcula quantos slots de atendimento estão disponíveis para uma data.
     
     Exemplo de resposta:
     {
+        "date": "03/03/2026",
         "weekday": 0,
         "available_slots": 16,
         "total_available_minutes": 480,
@@ -62,7 +65,13 @@ def get_available_slots(
         "slot_duration_minutes": 30
     }
     """
-    return working_hours_service.calculate_available_slots(repo, weekday.value)
+    try:
+        return working_hours_service.calculate_available_slots_for_date(repo, schedule_repo, date)
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail="Formato de data inválido. Use DD/MM/YYYY",
+        )
 
 
 def _validate_and_set_working_hours(

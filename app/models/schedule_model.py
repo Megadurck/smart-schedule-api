@@ -32,10 +32,11 @@ class Schedule(Base):
     professional = relationship("Professional", back_populates="schedules")
 
     __table_args__ = (
-        # Regra de concorrência: para status ativos, não pode haver dois agendamentos no mesmo slot da empresa.
+        # Regra de concorrência: para status ativos, não pode haver dois agendamentos
+        # no mesmo slot para o mesmo profissional da empresa.
         Index(
-            "uq_schedule_active_company_slot",
-            "company_id", "date", "time",
+            "uq_schedule_active_company_professional_slot",
+            "company_id", "professional_id", "date", "time",
             unique=True,
             postgresql_where=text("status IN ('pending', 'confirmed')"),
             sqlite_where=text("status IN ('pending', 'confirmed')"),

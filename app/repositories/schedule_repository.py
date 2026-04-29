@@ -103,6 +103,7 @@ class ScheduleRepository:
         self,
         schedule_date,
         schedule_time,
+        professional_id: int | None,
         exclude_id: int | None = None,
     ) -> bool:
         active_statuses = (ScheduleStatus.PENDING, ScheduleStatus.CONFIRMED)
@@ -112,6 +113,12 @@ class ScheduleRepository:
             Schedule.time == schedule_time,
             Schedule.status.in_(active_statuses),
         )
+
+        if professional_id is None:
+            query = query.filter(Schedule.professional_id.is_(None))
+        else:
+            query = query.filter(Schedule.professional_id == professional_id)
+
         if exclude_id is not None:
             query = query.filter(Schedule.id != exclude_id)
         return self.db.query(query.exists()).scalar()
@@ -122,6 +129,18 @@ class ScheduleRepository:
             .filter(Schedule.customer_id == customer_id, Schedule.company_id == self.company_id)
             .order_by(Schedule.date.desc())
             .all()
+        )
+
+    def count_active_by_date(self, schedule_date) -> int:
+        active_statuses = (ScheduleStatus.PENDING, ScheduleStatus.CONFIRMED)
+        return (
+            self.db.query(Schedule)
+            .filter(
+                Schedule.company_id == self.company_id,
+                Schedule.date == schedule_date,
+                Schedule.status.in_(active_statuses),
+            )
+            .count()
         )
 
     def update_status(self, schedule_id: int, new_status) -> Schedule | None:
