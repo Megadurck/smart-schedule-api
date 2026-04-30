@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '@/services/api'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -56,6 +56,8 @@ export default function DashboardPage() {
   const [revenueByProfessional, setRevenueByProfessional] = useState<RevenueByProfessionalItem[]>([])
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
+  const startDateRef = useRef<HTMLInputElement | null>(null)
+  const endDateRef = useRef<HTMLInputElement | null>(null)
 
   const applyInsights = (data: DashboardInsights) => {
     setScheduleCount(data.schedule_count)
@@ -109,6 +111,18 @@ export default function DashboardPage() {
     loadInsights()
   }
 
+  const openNativeDatePicker = (input: HTMLInputElement | null) => {
+    if (!input) return
+
+    const pickerTarget = input as HTMLInputElement & { showPicker?: () => void }
+    if (typeof pickerTarget.showPicker === 'function') {
+      pickerTarget.showPicker()
+      return
+    }
+
+    input.focus()
+  }
+
   return (
     <div className="space-y-6">
       <Card>
@@ -123,25 +137,45 @@ export default function DashboardPage() {
             <label htmlFor="startDate" className="text-sm font-medium">
               Data inicial
             </label>
-            <input
-              id="startDate"
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="w-full h-9 rounded-md border px-3 text-sm bg-white"
-            />
+            <div className="flex gap-2">
+              <input
+                id="startDate"
+                ref={startDateRef}
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full h-9 rounded-md border px-3 text-sm bg-white"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => openNativeDatePicker(startDateRef.current)}
+              >
+                Calendário
+              </Button>
+            </div>
           </div>
           <div className="space-y-1">
             <label htmlFor="endDate" className="text-sm font-medium">
               Data final
             </label>
-            <input
-              id="endDate"
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="w-full h-9 rounded-md border px-3 text-sm bg-white"
-            />
+            <div className="flex gap-2">
+              <input
+                id="endDate"
+                ref={endDateRef}
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-full h-9 rounded-md border px-3 text-sm bg-white"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => openNativeDatePicker(endDateRef.current)}
+              >
+                Calendário
+              </Button>
+            </div>
           </div>
           <div className="md:col-span-2 flex items-end gap-2">
             <Button onClick={applyDateFilter}>Aplicar filtro</Button>
