@@ -34,11 +34,13 @@ def update_company_admin_settings(
     cancellation_policy: str | None,
     default_timezone: str,
     reminder_lead_minutes: int,
+    average_ticket_amount: float,
 ) -> Company:
     company.display_name = display_name
     company.cancellation_policy = cancellation_policy
     company.default_timezone = default_timezone
     company.reminder_lead_minutes = reminder_lead_minutes
+    company.average_ticket_amount = average_ticket_amount
     db.add(company)
     db.commit()
     db.refresh(company)

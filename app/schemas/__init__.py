@@ -21,6 +21,7 @@ from app.schemas.auth import (
     AccessTokenResponse,
 )
 from app.schemas.company_admin import CompanyAdminSettingsResponse, CompanyAdminSettingsUpdate
+from app.schemas.dashboard import DashboardInsightsResponse, RevenueByProfessionalItem
 
 __all__ = [
     "ScheduleCreate",
@@ -46,5 +47,7 @@ __all__ = [
     "AccessTokenResponse",
     "CompanyAdminSettingsResponse",
     "CompanyAdminSettingsUpdate",
+    "DashboardInsightsResponse",
+    "RevenueByProfessionalItem",
 ]
 

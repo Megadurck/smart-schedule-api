@@ -54,6 +54,12 @@ def ensure_company_admin_columns():
                     "ALTER TABLE companies ADD COLUMN reminder_lead_minutes INTEGER NOT NULL DEFAULT 120"
                 )
             )
+        if "average_ticket_amount" not in existing_columns:
+            conn.execute(
+                text(
+                    "ALTER TABLE companies ADD COLUMN average_ticket_amount FLOAT NOT NULL DEFAULT 100"
+                )
+            )
 
 
 def ensure_schedule_constraints():

@@ -2,8 +2,8 @@ import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
+import { useState } from 'react'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -99,12 +99,9 @@ export default function LoginPage() {
             <Button type="submit" className="w-full" disabled={isSubmitting}>
               {isSubmitting ? 'Entrando…' : 'Entrar'}
             </Button>
-            <p className="text-sm text-center text-muted-foreground">
-              Não tem conta?{' '}
-              <Link to="/register" className="text-primary font-medium hover:underline">
-                Cadastrar empresa
-              </Link>
-            </p>
+            <Link to="/" className="text-sm text-center text-muted-foreground hover:underline">
+              ← Voltar à página inicial
+            </Link>
           </CardFooter>
         </form>
       </Card>

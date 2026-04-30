@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text
+from sqlalchemy import Column, Float, Integer, String, Text
 from sqlalchemy.orm import relationship
 
 from app.database.session import Base
@@ -13,6 +13,7 @@ class Company(Base):
     cancellation_policy = Column(Text, nullable=True)
     default_timezone = Column(String, nullable=False, default="America/Sao_Paulo")
     reminder_lead_minutes = Column(Integer, nullable=False, default=120)
+    average_ticket_amount = Column(Float, nullable=False, default=100.0)
 
     users = relationship("User", back_populates="company")
     customers = relationship("Customer", back_populates="company")

@@ -125,6 +125,9 @@ export default function RegisterPage() {
                 Fazer login
               </Link>
             </p>
+            <Link to="/" className="text-sm text-center text-muted-foreground hover:underline">
+              ← Voltar à página inicial
+            </Link>
           </CardFooter>
         </form>
       </Card>

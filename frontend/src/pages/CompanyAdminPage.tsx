@@ -13,6 +13,7 @@ type CompanyLocalSettings = {
   cancellationPolicy: string
   defaultTimezone: string
   reminderLeadMinutes: string
+  averageTicketAmount: string
 }
 
 export default function CompanyAdminPage() {
@@ -25,6 +26,7 @@ export default function CompanyAdminPage() {
     cancellationPolicy: 'Cancelamentos sem aviso serão marcados internamente no histórico.',
     defaultTimezone: 'America/Sao_Paulo',
     reminderLeadMinutes: '120',
+    averageTicketAmount: '100',
   })
 
   useEffect(() => {
@@ -39,6 +41,7 @@ export default function CompanyAdminPage() {
             'Cancelamentos sem aviso serão marcados internamente no histórico.',
           defaultTimezone: data.default_timezone ?? 'America/Sao_Paulo',
           reminderLeadMinutes: String(data.reminder_lead_minutes ?? 120),
+          averageTicketAmount: String(data.average_ticket_amount ?? 100),
         })
       })
       .catch(() => setError('Não foi possível carregar configurações da empresa.'))
@@ -54,6 +57,7 @@ export default function CompanyAdminPage() {
         cancellation_policy: settings.cancellationPolicy || null,
         default_timezone: settings.defaultTimezone,
         reminder_lead_minutes: Number(settings.reminderLeadMinutes),
+        average_ticket_amount: Number(settings.averageTicketAmount),
       })
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
@@ -121,6 +125,19 @@ export default function CompanyAdminPage() {
               value={settings.reminderLeadMinutes}
               onChange={(e) =>
                 setSettings((prev) => ({ ...prev, reminderLeadMinutes: e.target.value }))
+              }
+            />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="averageTicketAmount">Ticket médio padrão (R$)</Label>
+            <Input
+              id="averageTicketAmount"
+              type="number"
+              min="0"
+              step="0.01"
+              value={settings.averageTicketAmount}
+              onChange={(e) =>
+                setSettings((prev) => ({ ...prev, averageTicketAmount: e.target.value }))
               }
             />
           </div>

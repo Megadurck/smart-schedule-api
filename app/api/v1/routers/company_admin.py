@@ -34,4 +34,5 @@ def update_company_admin(
         cancellation_policy=payload.cancellation_policy,
         default_timezone=payload.default_timezone,
         reminder_lead_minutes=payload.reminder_lead_minutes,
+        average_ticket_amount=payload.average_ticket_amount,
     )

@@ -16,6 +16,7 @@ def get_company_admin_settings(db: Session, company_id: int):
         "cancellation_policy": company.cancellation_policy,
         "default_timezone": company.default_timezone,
         "reminder_lead_minutes": company.reminder_lead_minutes,
+        "average_ticket_amount": company.average_ticket_amount,
     }
 
 
@@ -26,6 +27,7 @@ def update_company_admin_settings(
     cancellation_policy: str | None,
     default_timezone: str,
     reminder_lead_minutes: int,
+    average_ticket_amount: float,
 ):
     company = company_repository.get_company_by_id(db, company_id)
     if not company:
@@ -38,6 +40,7 @@ def update_company_admin_settings(
         cancellation_policy=cancellation_policy,
         default_timezone=default_timezone,
         reminder_lead_minutes=reminder_lead_minutes,
+        average_ticket_amount=average_ticket_amount,
     )
 
     return {
@@ -47,4 +50,5 @@ def update_company_admin_settings(
         "cancellation_policy": updated.cancellation_policy,
         "default_timezone": updated.default_timezone,
         "reminder_lead_minutes": updated.reminder_lead_minutes,
+        "average_ticket_amount": updated.average_ticket_amount,
     }

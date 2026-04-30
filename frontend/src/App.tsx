@@ -11,6 +11,7 @@ import SchedulesPage from '@/pages/SchedulesPage'
 import AgentSettingsPage from '@/pages/AgentSettingsPage'
 import WorkingHoursPage from '@/pages/WorkingHoursPage'
 import CompanyAdminPage from '@/pages/CompanyAdminPage'
+import LandingPage from '@/pages/LandingPage'
 
 function PrivateRoute({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth()
@@ -25,7 +26,14 @@ function PublicRoute({ children }: { children: ReactNode }) {
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/login" replace />} />
+      <Route
+        path="/"
+        element={
+          <PublicRoute>
+            <LandingPage />
+          </PublicRoute>
+        }
+      />
       <Route
         path="/login"
         element={
@@ -59,7 +67,7 @@ function AppRoutes() {
         <Route path="/agent" element={<AgentSettingsPage />} />
       </Route>
 
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
 }
