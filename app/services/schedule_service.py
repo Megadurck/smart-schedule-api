@@ -21,6 +21,12 @@ def parse_date_time(date_str: str, time_str: str):
             detail="Formato de data ou hora inválido. Use DD/MM/YYYY para data e HH:MM:SS para hora.",
         )
 
+    if schedule_date < datetime.now().date():
+        raise HTTPException(
+            status_code=422,
+            detail="Não é possível realizar agendamento em datas passadas.",
+        )
+
     return schedule_date, schedule_time
 
 

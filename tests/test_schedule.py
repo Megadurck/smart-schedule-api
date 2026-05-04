@@ -44,7 +44,7 @@ def create_schedule(headers=None):
     minute = counter[0] % 60
     payload = {
         "customer_name": f"Cliente{counter[0]}",
-        "date": "03/03/2026",
+        "date": "02/06/2026",
         "time": f"10:{minute:02d}:00",
     }
     response = client.post("/api/v1/schedule/", json=payload, headers=headers)
@@ -76,13 +76,13 @@ def test_read_schedule():
     data = response.json()
     assert data["id"] == created["id"]
     assert data["customer"]["name"].startswith("Cliente")
-    assert data["date"] == "2026-03-03"
+    assert data["date"] == "2026-06-02"
     assert data["time"].startswith("10:")
 
 
 def test_create_schedule_json():
     headers = get_auth_headers("empresa_schedule")
-    payload = {"customer_name": "JsonUser", "date": "03/03/2026", "time": "09:00:00"}
+    payload = {"customer_name": "JsonUser", "date": "02/06/2026", "time": "09:00:00"}
     response = client.post("/api/v1/schedule/", json=payload, headers=headers)
     assert response.status_code == 201
     data = response.json()
@@ -92,12 +92,12 @@ def test_create_schedule_json():
 def test_update_schedule_json():
     headers = get_auth_headers("empresa_schedule")
     created = create_schedule(headers=headers)
-    updated = {"customer_name": "JsonEdit", "date": "04/03/2026", "time": "11:00:00"}
+    updated = {"customer_name": "JsonEdit", "date": "04/06/2026", "time": "11:00:00"}
     response = client.put(f"/api/v1/schedule/{created['id']}", json=updated, headers=headers)
     assert response.status_code == 200
     data = response.json()
     assert data["customer"]["name"] == "JsonEdit"
-    assert data["date"] == "2026-03-04"
+    assert data["date"] == "2026-06-04"
     assert data["time"] == "11:00:00"
 
 
@@ -106,14 +106,14 @@ def test_update_schedule():
     created = create_schedule(headers=headers)
     updated_data = {
         "customer_name": "Maria",
-        "date": "04/03/2026",
+        "date": "04/06/2026",
         "time": "14:00:00",
     }
     response = client.put(f"/api/v1/schedule/{created['id']}", json=updated_data, headers=headers)
     assert response.status_code == 200
     data = response.json()
     assert data["customer"]["name"] == "Maria"
-    assert data["date"] == "2026-03-04"
+    assert data["date"] == "2026-06-04"
     assert data["time"] == "14:00:00"
 
 
@@ -207,6 +207,23 @@ def test_create_schedule_invalid_format_json():
     assert "Formato de data ou hora inválido" in response.json()["detail"]
 
 
+def test_create_schedule_past_date():
+    headers = get_auth_headers("empresa_schedule")
+    payload = {"customer_name": "Viajante", "date": "01/01/2020", "time": "10:00:00"}
+    response = client.post("/api/v1/schedule/", json=payload, headers=headers)
+    assert response.status_code == 422
+    assert "datas passadas" in response.json()["detail"]
+
+
+def test_update_schedule_past_date():
+    headers = get_auth_headers("empresa_schedule")
+    created = create_schedule(headers=headers)
+    payload = {"customer_name": "Viajante", "date": "01/01/2020", "time": "10:00:00"}
+    response = client.put(f"/api/v1/schedule/{created['id']}", json=payload, headers=headers)
+    assert response.status_code == 422
+    assert "datas passadas" in response.json()["detail"]
+
+
 def test_update_schedule_conflict():
     headers = get_auth_headers("empresa_schedule")
     a = create_schedule(headers=headers)
@@ -214,7 +231,7 @@ def test_update_schedule_conflict():
 
     payload = {
         "customer_name": "Outro",
-        "date": "03/03/2026",
+        "date": "02/06/2026",
         "time": a["time"],
     }
     response = client.put(f"/api/v1/schedule/{b['id']}", json=payload, headers=headers)
@@ -242,13 +259,13 @@ def test_schedule_allows_same_time_for_different_professionals():
 
     first = {
         "customer_name": "Cliente A",
-        "date": "27/02/2026",
+        "date": "05/06/2026",
         "time": "15:00:00",
         "professional_id": professional_a["id"],
     }
     second = {
         "customer_name": "Cliente B",
-        "date": "27/02/2026",
+        "date": "05/06/2026",
         "time": "15:00:00",
         "professional_id": professional_b["id"],
     }
@@ -274,13 +291,13 @@ def test_schedule_blocks_same_time_for_same_professional():
 
     first = {
         "customer_name": "Cliente A",
-        "date": "27/02/2026",
+        "date": "05/06/2026",
         "time": "16:00:00",
         "professional_id": professional["id"],
     }
     second = {
         "customer_name": "Cliente B",
-        "date": "27/02/2026",
+        "date": "05/06/2026",
         "time": "16:00:00",
         "professional_id": professional["id"],
     }
@@ -297,7 +314,7 @@ def test_schedule_conflict():
     headers = get_auth_headers("empresa_schedule")
     first = {
         "customer_name": "Joao Conflito",
-        "date": "27/02/2026",
+        "date": "05/06/2026",
         "time": "15:00:00",
     }
     response1 = client.post("/api/v1/schedule/", json=first, headers=headers)
@@ -305,7 +322,7 @@ def test_schedule_conflict():
 
     second = {
         "customer_name": "Maria Conflito",
-        "date": "27/02/2026",
+        "date": "05/06/2026",
         "time": "15:00:00",
     }
     response2 = client.post("/api/v1/schedule/", json=second, headers=headers)
@@ -316,7 +333,7 @@ def test_schedule_conflict():
 def test_create_schedule_requires_token():
     payload = {
         "customer_name": "SemToken",
-        "date": "03/03/2026",
+        "date": "02/06/2026",
         "time": "10:00:00",
     }
     response = client.post("/api/v1/schedule/", json=payload)
@@ -330,8 +347,8 @@ def test_list_schedule_requires_token():
 
 def test_suggest_schedule_prefers_recurring_history():
     headers = get_auth_headers("empresa_schedule")
-    payload_1 = {"customer_name": "Cliente Recorrente", "date": "03/03/2026", "time": "10:00:00"}
-    payload_2 = {"customer_name": "Cliente Recorrente", "date": "10/03/2026", "time": "10:00:00"}
+    payload_1 = {"customer_name": "Cliente Recorrente", "date": "02/06/2026", "time": "10:00:00"}
+    payload_2 = {"customer_name": "Cliente Recorrente", "date": "09/06/2026", "time": "10:00:00"}
     response_1 = client.post("/api/v1/schedule/", json=payload_1, headers=headers)
     response_2 = client.post("/api/v1/schedule/", json=payload_2, headers=headers)
     assert response_1.status_code == 201
@@ -339,7 +356,7 @@ def test_suggest_schedule_prefers_recurring_history():
 
     suggestion_request = {
         "customer_name": "Cliente Recorrente",
-        "start_date": "11/03/2026",
+        "start_date": "10/06/2026",
         "limit": 3,
         "search_days": 30,
     }
@@ -352,7 +369,7 @@ def test_suggest_schedule_prefers_recurring_history():
     assert data["customer_name"] == "Cliente Recorrente"
     assert len(data["suggestions"]) >= 1
     assert data["suggestions"][0]["time"] == "10:00:00"
-    assert data["suggestions"][0]["date"] == "2026-03-17"
+    assert data["suggestions"][0]["date"] == "2026-06-16"
     assert data["suggestions"][0]["source"] == "history_preference"
 
 
@@ -360,7 +377,7 @@ def test_suggest_schedule_falls_back_to_next_available_without_history():
     headers = get_auth_headers("empresa_schedule")
     suggestion_request = {
         "customer_name": "Cliente Novo",
-        "start_date": "02/03/2026",
+        "start_date": "01/06/2026",
         "limit": 2,
         "search_days": 14,
     }
@@ -374,7 +391,7 @@ def test_suggest_schedule_falls_back_to_next_available_without_history():
     assert data["customer_name"] == "Cliente Novo"
     assert len(data["suggestions"]) == 2
     assert data["suggestions"][0]["source"] == "next_available"
-    assert data["suggestions"][0]["date"] == "2026-03-02"
+    assert data["suggestions"][0]["date"] == "2026-06-01"
 
 
 def test_schedule_isolated_between_companies():
@@ -395,12 +412,12 @@ def test_schedule_isolated_between_companies():
 
     first = {
         "customer_name": "Cliente A",
-        "date": "27/02/2026",
+        "date": "05/06/2026",
         "time": "16:00:00",
     }
     second = {
         "customer_name": "Cliente B",
-        "date": "27/02/2026",
+        "date": "05/06/2026",
         "time": "16:00:00",
     }
 
