@@ -131,12 +131,7 @@ def _validate_and_set_working_hours(
             detail="Duração do slot deve ser maior que 0 minutos",
         )
 
-    if weekday.value < 0 or weekday.value > 6:
-        raise HTTPException(
-            status_code=400,
-            detail="weekday deve estar entre 0 (segunda) e 6 (domingo)",
-        )
-
+    # weekday já foi validado pelo Pydantic/IntEnum (valores 0-6).
     return working_hours_service.set_working_hours(
         repo,
         weekday.value,

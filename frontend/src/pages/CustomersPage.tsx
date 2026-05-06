@@ -22,7 +22,22 @@ export default function CustomersPage() {
   }
 
   useEffect(() => {
-    load().catch(() => setError('Não foi possível carregar clientes.'))
+    let cancelled = false
+
+    const loadInitialCustomers = async () => {
+      try {
+        const { data } = await api.get<Customer[]>('/customers/')
+        if (!cancelled) setItems(data)
+      } catch {
+        if (!cancelled) setError('Não foi possível carregar clientes.')
+      }
+    }
+
+    void loadInitialCustomers()
+
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   const handleCreate = async (e: React.FormEvent) => {

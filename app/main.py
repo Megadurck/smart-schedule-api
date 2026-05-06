@@ -6,7 +6,6 @@ from app.api.v1 import api_router
 from app.database.session import (
     engine,
     Base,
-    ensure_auth_columns,
     ensure_company_admin_columns,
     ensure_schedule_constraints,
 )
@@ -21,7 +20,6 @@ from app.models.working_hours_model import WorkingHours
 async def lifespan(app: FastAPI):
     # Startup: Criar tabelas do banco
     Base.metadata.create_all(bind=engine)
-    ensure_auth_columns()
     ensure_company_admin_columns()
     ensure_schedule_constraints()
     yield

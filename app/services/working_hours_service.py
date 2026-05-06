@@ -91,6 +91,7 @@ def calculate_available_slots_for_date(
         "lunch_end": str(wh.lunch_end) if wh.lunch_end else None,
         "slot_duration_minutes": slot_duration,
         "total_available_minutes": remaining_available_minutes,
+        # Ambas as chaves são mantidas para compatibilidade com diferentes clientes da API.
         "lunch_duration_minutes": lunch_duration,
         "total_lunch_minutes": lunch_duration,
         "total_slots": total_slots,

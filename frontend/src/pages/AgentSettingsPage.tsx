@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -13,21 +13,27 @@ type AgentSettings = {
 
 const STORAGE_KEY = 'smart_schedule_agent_settings'
 
-export default function AgentSettingsPage() {
-  const [settings, setSettings] = useState<AgentSettings>({
-    enabled: false,
-    model: 'gpt-5.3-codex',
-    tone: 'profissional',
-    systemPrompt: 'Você é um assistente para apoiar o atendimento e organização da agenda.',
-  })
-  const [saved, setSaved] = useState(false)
+const defaultSettings: AgentSettings = {
+  enabled: false,
+  model: 'gpt-5.3-codex',
+  tone: 'profissional',
+  systemPrompt: 'Você é um assistente para apoiar o atendimento e organização da agenda.',
+}
 
-  useEffect(() => {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (raw) {
-      setSettings(JSON.parse(raw) as AgentSettings)
-    }
-  }, [])
+const loadStoredSettings = (): AgentSettings => {
+  const raw = localStorage.getItem(STORAGE_KEY)
+  if (!raw) return defaultSettings
+
+  try {
+    return JSON.parse(raw) as AgentSettings
+  } catch {
+    return defaultSettings
+  }
+}
+
+export default function AgentSettingsPage() {
+  const [settings, setSettings] = useState<AgentSettings>(loadStoredSettings)
+  const [saved, setSaved] = useState(false)
 
   const save = () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settings))

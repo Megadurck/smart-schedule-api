@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button, buttonVariants } from '@/components/ui/button'
+import { Button } from '@/components/ui/button'
+import { buttonVariants } from '@/components/ui/button-variants'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/contexts/useAuth'
 import { cn } from '@/lib/utils'
 import { api } from '@/services/api'
 
@@ -19,7 +20,7 @@ type CompanyLocalSettings = {
 export default function CompanyAdminPage() {
   const { user } = useAuth()
   const [saved, setSaved] = useState(false)
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [settings, setSettings] = useState<CompanyLocalSettings>({
     companyDisplayName: '',
@@ -30,10 +31,13 @@ export default function CompanyAdminPage() {
   })
 
   useEffect(() => {
-    setLoading(true)
-    api
-      .get('/company-admin/')
-      .then(({ data }) => {
+    let cancelled = false
+
+    const loadCompanySettings = async () => {
+      try {
+        const { data } = await api.get('/company-admin/')
+        if (cancelled) return
+
         setSettings({
           companyDisplayName: data.display_name ?? '',
           cancellationPolicy:
@@ -43,9 +47,18 @@ export default function CompanyAdminPage() {
           reminderLeadMinutes: String(data.reminder_lead_minutes ?? 120),
           averageTicketAmount: String(data.average_ticket_amount ?? 100),
         })
-      })
-      .catch(() => setError('Não foi possível carregar configurações da empresa.'))
-      .finally(() => setLoading(false))
+      } catch {
+        if (!cancelled) setError('Não foi possível carregar configurações da empresa.')
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    void loadCompanySettings()
+
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   const save = async () => {

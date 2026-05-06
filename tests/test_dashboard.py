@@ -1,6 +1,11 @@
 from fastapi.testclient import TestClient
 
+from conftest import next_weekday
+
 from app.main import app
+
+# Próxima terça-feira: configure_working_hours define weekday=1 (terça).
+_NEXT_TUESDAY = next_weekday(1)
 
 
 client = TestClient(app)
@@ -31,7 +36,7 @@ def configure_working_hours(headers):
 def create_completed_schedule(headers, customer_name: str, time_value: str, professional_id: int | None = None):
     payload = {
         "customer_name": customer_name,
-        "date": "03/03/2026",
+        "date": _NEXT_TUESDAY,
         "time": time_value,
         "professional_id": professional_id,
     }
@@ -85,7 +90,9 @@ def test_dashboard_insights_returns_revenue_totals_and_by_professional():
     assert data["average_ticket_amount"] == 150
     assert data["completed_schedules"] == 2
     assert data["total_revenue"] == 300
-    assert len(data["next_schedules"]) == 2
+    # next_schedules mostra apenas agendamentos ativos (pending/confirmed) futuros.
+    # Os agendamentos criados aqui são marcados como "completed", portanto não aparecem.
+    assert len(data["next_schedules"]) == 0
 
     by_professional = {item["professional_name"]: item for item in data["revenue_by_professional"]}
     assert by_professional["Ana"]["completed_schedules"] == 1

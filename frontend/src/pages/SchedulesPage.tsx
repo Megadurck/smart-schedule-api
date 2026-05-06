@@ -79,7 +79,28 @@ export default function SchedulesPage() {
   }
 
   useEffect(() => {
-    load().catch(() => setError('Não foi possível carregar dados de agendamento.'))
+    let cancelled = false
+
+    const loadInitialData = async () => {
+      try {
+        const [scheduleRes, professionalsRes] = await Promise.all([
+          api.get<Schedule[]>('/schedule/?skip=0&limit=100'),
+          api.get<Professional[]>('/professionals/?skip=0&limit=100'),
+        ])
+
+        if (cancelled) return
+        setSchedules(scheduleRes.data)
+        setProfessionals(professionalsRes.data)
+      } catch {
+        if (!cancelled) setError('Não foi possível carregar dados de agendamento.')
+      }
+    }
+
+    void loadInitialData()
+
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   const handleCreateSchedule = async (e: React.FormEvent) => {

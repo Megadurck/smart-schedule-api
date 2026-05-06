@@ -1,4 +1,5 @@
 import os
+from datetime import date as _date, timedelta as _timedelta
 
 import pytest
 from sqlalchemy import create_engine
@@ -40,3 +41,17 @@ def clean_database():
 
     Base.metadata.drop_all(bind=_test_engine)
     Base.metadata.create_all(bind=_test_engine)
+
+
+def next_weekday(weekday: int) -> str:
+    """Retorna a próxima data futura em DD/MM/YYYY para o dia da semana informado.
+
+    Parâmetros:
+        weekday: 0 = segunda-feira ... 6 = domingo (padrão Python)
+
+    Sempre retorna uma data estritamente no futuro (nunca hoje), para que os
+    testes nunca falhem pela regra que bloqueia agendamentos em datas passadas.
+    """
+    today = _date.today()
+    days_ahead = (weekday - today.weekday()) % 7 or 7
+    return (today + _timedelta(days=days_ahead)).strftime("%d/%m/%Y")

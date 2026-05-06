@@ -56,7 +56,22 @@ export default function WorkingHoursPage() {
   }
 
   useEffect(() => {
-    load().catch(() => setError('Não foi possível carregar horários de funcionamento.'))
+    let cancelled = false
+
+    const loadInitialWorkingHours = async () => {
+      try {
+        const { data } = await api.get<WorkingHours[]>('/working-hours/')
+        if (!cancelled) setItems(data)
+      } catch {
+        if (!cancelled) setError('Não foi possível carregar horários de funcionamento.')
+      }
+    }
+
+    void loadInitialWorkingHours()
+
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   const handleSave = async (e: React.FormEvent) => {

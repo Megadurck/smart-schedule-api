@@ -13,14 +13,32 @@ from app.services import auth_service
 security = HTTPBearer()
 
 
+# ---------------------------------------------------------------------------
+# Camada de autenticação e isolamento multi-tenant
+#
+# O fluxo de isolamento é:
+#   1. get_current_user  → decodifica o token e retorna o User com company_id
+#   2. get_company_id    → extrai o company_id do User autenticado
+#   3. get_*_repo        → instancia o repositório já filtrado pela empresa
+#
+# Cada repositório recebe o company_id no construtor e aplica o filtro em
+# TODAS as queries, garantindo que dados de uma empresa jamais vazem para outra.
+# ---------------------------------------------------------------------------
+
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db),
 ):
+    """Valida o Bearer token e retorna o usuário autenticado.
+
+    Levanta 401 se o token for inválido, expirado ou não corresponder
+    a nenhum usuário da empresa informada no payload do JWT.
+    """
     return auth_service.get_user_from_access_token(db, credentials.credentials)
 
 
 def get_company_id(current_user=Depends(get_current_user)) -> int:
+    """Extrai o company_id do usuário autenticado para uso nas dependências."""
     return current_user.company_id
 
 

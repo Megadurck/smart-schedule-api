@@ -1,6 +1,11 @@
 from fastapi.testclient import TestClient
 
+from conftest import next_weekday
+
 from app.main import app
+
+# Próxima terça-feira: configure_working_hours define seg-sex (weekday 0-4).
+_NEXT_TUESDAY = next_weekday(1)
 
 
 client = TestClient(app)
@@ -76,7 +81,7 @@ def test_schedule_can_reference_professional():
         "/api/v1/schedule/",
         json={
             "customer_name": "Cliente Prof",
-            "date": "03/03/2026",
+            "date": _NEXT_TUESDAY,
             "time": "09:00:00",
             "professional_id": professional_id,
         },
@@ -105,7 +110,7 @@ def test_foreign_professional_is_rejected():
         "/api/v1/schedule/",
         json={
             "customer_name": "Cliente A",
-            "date": "03/03/2026",
+            "date": _NEXT_TUESDAY,
             "time": "09:00:00",
             "professional_id": professional_id,
         },

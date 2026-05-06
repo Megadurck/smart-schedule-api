@@ -24,7 +24,22 @@ export default function ProfessionalsPage() {
   }
 
   useEffect(() => {
-    load().catch(() => setError('Não foi possível carregar profissionais.'))
+    let cancelled = false
+
+    const loadInitialProfessionals = async () => {
+      try {
+        const { data } = await api.get<Professional[]>('/professionals/')
+        if (!cancelled) setItems(data)
+      } catch {
+        if (!cancelled) setError('Não foi possível carregar profissionais.')
+      }
+    }
+
+    void loadInitialProfessionals()
+
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   const handleCreate = async (e: React.FormEvent) => {

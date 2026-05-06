@@ -1,5 +1,7 @@
 from fastapi.testclient import TestClient
 
+from conftest import next_weekday
+
 from app.main import app
 
 
@@ -175,6 +177,13 @@ class TestWorkingHours:
 class TestScheduleWithWorkingHours:
     def setup_method(self):
         self.headers = get_auth_headers("empresa_sched_wh")
+        # Datas futuras por dia da semana — evita rejeição de datas passadas.
+        self.mon = next_weekday(0)
+        self.tue = next_weekday(1)
+        self.wed = next_weekday(2)
+        self.thu = next_weekday(3)
+        self.sat = next_weekday(5)
+        self.sun = next_weekday(6)
         for weekday in range(5):
             response = client.post(
                 "/api/v1/working-hours/",
@@ -184,26 +193,26 @@ class TestScheduleWithWorkingHours:
             assert response.status_code == 201
 
     def test_create_schedule_within_working_hours(self):
-        payload = {"customer_name": "Joao Silva", "date": "03/03/2026", "time": "10:00:00"}
+        payload = {"customer_name": "Joao Silva", "date": self.tue, "time": "10:00:00"}
         response = client.post("/api/v1/schedule/", json=payload, headers=self.headers)
         assert response.status_code == 201
         assert response.json()["customer"]["name"] == "Joao Silva"
 
     def test_create_schedule_before_working_hours(self):
-        payload = {"customer_name": "Maria", "date": "03/03/2026", "time": "06:00:00"}
+        payload = {"customer_name": "Maria", "date": self.tue, "time": "06:00:00"}
         response = client.post("/api/v1/schedule/", json=payload, headers=self.headers)
         assert response.status_code == 422
         assert "Horário fora do funcionamento" in response.json()["detail"]
 
     def test_create_schedule_after_working_hours(self):
-        payload = {"customer_name": "Pedro", "date": "03/03/2026", "time": "18:00:00"}
+        payload = {"customer_name": "Pedro", "date": self.tue, "time": "18:00:00"}
         response = client.post("/api/v1/schedule/", json=payload, headers=self.headers)
         assert response.status_code == 422
         assert "Horário fora do funcionamento" in response.json()["detail"]
 
     def test_create_schedule_at_boundary(self):
-        start_payload = {"customer_name": "Alice", "date": "03/03/2026", "time": "08:00:00"}
-        end_payload = {"customer_name": "Bob", "date": "03/03/2026", "time": "17:00:00"}
+        start_payload = {"customer_name": "Alice", "date": self.tue, "time": "08:00:00"}
+        end_payload = {"customer_name": "Bob", "date": self.tue, "time": "17:00:00"}
 
         response_start = client.post("/api/v1/schedule/", json=start_payload, headers=self.headers)
         response_end = client.post("/api/v1/schedule/", json=end_payload, headers=self.headers)
@@ -212,7 +221,8 @@ class TestScheduleWithWorkingHours:
         assert response_end.status_code == 201
 
     def test_create_schedule_no_working_hours_defined(self):
-        payload = {"customer_name": "Carlos", "date": "08/03/2026", "time": "10:00:00"}
+        # Domingo não tem horário de funcionamento configurado no setup_method (weekday 0-4).
+        payload = {"customer_name": "Carlos", "date": self.sun, "time": "10:00:00"}
         response = client.post("/api/v1/schedule/", json=payload, headers=self.headers)
         assert response.status_code == 422
         assert "Horário fora do funcionamento" in response.json()["detail"]
@@ -220,11 +230,11 @@ class TestScheduleWithWorkingHours:
     def test_update_schedule_within_working_hours(self):
         created = client.post(
             "/api/v1/schedule/",
-            json={"customer_name": "Cliente", "date": "03/03/2026", "time": "10:00:00"},
+            json={"customer_name": "Cliente", "date": self.tue, "time": "10:00:00"},
             headers=self.headers,
         ).json()
 
-        updated = {"customer_name": "Cliente", "date": "04/03/2026", "time": "14:00:00"}
+        updated = {"customer_name": "Cliente", "date": self.wed, "time": "14:00:00"}
         response = client.put(f"/api/v1/schedule/{created['id']}", json=updated, headers=self.headers)
         assert response.status_code == 200
         assert response.json()["time"] == "14:00:00"
@@ -232,17 +242,17 @@ class TestScheduleWithWorkingHours:
     def test_update_schedule_outside_working_hours(self):
         created = client.post(
             "/api/v1/schedule/",
-            json={"customer_name": "Cliente", "date": "03/03/2026", "time": "10:00:00"},
+            json={"customer_name": "Cliente", "date": self.tue, "time": "10:00:00"},
             headers=self.headers,
         ).json()
 
-        updated = {"customer_name": "Cliente", "date": "04/03/2026", "time": "19:00:00"}
+        updated = {"customer_name": "Cliente", "date": self.wed, "time": "19:00:00"}
         response = client.put(f"/api/v1/schedule/{created['id']}", json=updated, headers=self.headers)
         assert response.status_code == 422
         assert "Horário fora do funcionamento" in response.json()["detail"]
 
     def test_schedule_with_json_and_working_hours(self):
-        payload = {"customer_name": "JSON User", "date": "05/03/2026", "time": "11:30:00"}
+        payload = {"customer_name": "JSON User", "date": self.thu, "time": "11:30:00"}
         response = client.post("/api/v1/schedule/", json=payload, headers=self.headers)
         assert response.status_code == 201
         assert "id" in response.json()
@@ -250,11 +260,11 @@ class TestScheduleWithWorkingHours:
     def test_conflict_and_working_hours_validation_order(self):
         client.post(
             "/api/v1/schedule/",
-            json={"customer_name": "Primeiro", "date": "03/03/2026", "time": "10:00:00"},
+            json={"customer_name": "Primeiro", "date": self.tue, "time": "10:00:00"},
             headers=self.headers,
         )
 
-        payload = {"customer_name": "Conflito", "date": "03/03/2026", "time": "10:00:00"}
+        payload = {"customer_name": "Conflito", "date": self.tue, "time": "10:00:00"}
         response = client.post("/api/v1/schedule/", json=payload, headers=self.headers)
         assert response.status_code == 409
         assert response.json()["detail"] == "Horário já ocupado"
@@ -274,10 +284,11 @@ class TestScheduleWithWorkingHours:
         )
 
         response = client.get("/api/v1/working-hours/slots", params={"date": "02/03/2026"}, headers=self.headers)
+        response = client.get("/api/v1/working-hours/slots", params={"date": self.mon}, headers=self.headers)
         assert response.status_code == 200
         data = response.json()
         assert data["weekday"] == 0
-        assert data["date"] == "02/03/2026"
+        assert data["date"] == self.mon
         assert data["available_slots"] == 16
         assert data["total_available_minutes"] == 480
         assert data["slot_duration_minutes"] == 30
@@ -300,7 +311,7 @@ class TestScheduleWithWorkingHours:
             headers=self.headers,
         )
 
-        response = client.get("/api/v1/working-hours/slots", params={"date": "07/03/2026"}, headers=self.headers)
+        response = client.get("/api/v1/working-hours/slots", params={"date": self.sat}, headers=self.headers)
         assert response.status_code == 200
         data = response.json()
         assert data["available_slots"] == 7
@@ -324,7 +335,7 @@ class TestScheduleWithWorkingHours:
             headers=self.headers,
         )
 
-        response = client.get("/api/v1/working-hours/slots", params={"date": "08/03/2026"}, headers=self.headers)
+        response = client.get("/api/v1/working-hours/slots", params={"date": self.sun}, headers=self.headers)
         assert response.status_code == 200
         data = response.json()
         assert data["available_slots"] == 12
@@ -334,10 +345,10 @@ class TestScheduleWithWorkingHours:
         assert data["total_slots"] == 12
 
     def test_available_slots_no_working_hours(self):
-        response = client.get("/api/v1/working-hours/slots", params={"date": "08/03/2026"}, headers=self.headers)
+        response = client.get("/api/v1/working-hours/slots", params={"date": self.sun}, headers=self.headers)
         assert response.status_code == 200
         data = response.json()
-        assert data["date"] == "08/03/2026"
+        assert data["date"] == self.sun
         assert data["weekday"] == 6
         assert data["available_slots"] == 0
 
@@ -356,13 +367,14 @@ class TestScheduleWithWorkingHours:
         )
 
         for payload in [
-            {"customer_name": "Cliente 1", "date": "30/04/2026", "time": "08:00:00"},
-            {"customer_name": "Cliente 2", "date": "30/04/2026", "time": "08:30:00"},
+            {"customer_name": "Cliente 1", "date": self.thu, "time": "08:00:00"},
+            {"customer_name": "Cliente 2", "date": self.thu, "time": "08:30:00"},
         ]:
             response = client.post("/api/v1/schedule/", json=payload, headers=self.headers)
             assert response.status_code == 201
 
         response = client.get("/api/v1/working-hours/slots", params={"date": "30/04/2026"}, headers=self.headers)
+        response = client.get("/api/v1/working-hours/slots", params={"date": self.thu}, headers=self.headers)
         assert response.status_code == 200
         data = response.json()
         assert data["weekday"] == 3
@@ -387,7 +399,7 @@ class TestScheduleWithWorkingHours:
 
         created = client.post(
             "/api/v1/schedule/",
-            json={"customer_name": "Cliente Cancelado", "date": "30/04/2026", "time": "08:00:00"},
+            json={"customer_name": "Cliente Cancelado", "date": self.thu, "time": "08:00:00"},
             headers=self.headers,
         )
         assert created.status_code == 201
@@ -399,7 +411,7 @@ class TestScheduleWithWorkingHours:
         )
         assert cancelled.status_code == 200
 
-        response = client.get("/api/v1/working-hours/slots", params={"date": "30/04/2026"}, headers=self.headers)
+        response = client.get("/api/v1/working-hours/slots", params={"date": self.thu}, headers=self.headers)
         assert response.status_code == 200
         data = response.json()
         assert data["booked_slots"] == 0

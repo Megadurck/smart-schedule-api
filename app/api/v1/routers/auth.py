@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
+from app.core.dependencies import get_current_user
 from app.database.session import get_db
 from app.schemas.auth import (
     AccessTokenResponse,
@@ -13,7 +13,6 @@ from app.services import auth_service
 
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
-security = HTTPBearer()
 
 
 @router.post("/register", response_model=TokenResponse, status_code=201)
@@ -42,6 +41,6 @@ def refresh(payload: RefreshTokenRequest):
 
 
 @router.get("/me")
-def me(credentials: HTTPAuthorizationCredentials = Depends(security), db=Depends(get_db)):
-    user = auth_service.get_user_from_access_token(db, credentials.credentials)
-    return {"id": user.id, "name": user.name, "company_id": user.company_id}
+def me(current_user=Depends(get_current_user)):
+    """Retorna os dados do usuário autenticado com base no access token."""
+    return {"id": current_user.id, "name": current_user.name, "company_id": current_user.company_id}

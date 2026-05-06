@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '@/services/api'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button, buttonVariants } from '@/components/ui/button'
+import { Button } from '@/components/ui/button'
+import { buttonVariants } from '@/components/ui/button-variants'
 import { cn } from '@/lib/utils'
 
 type Schedule = {
@@ -95,10 +96,22 @@ export default function DashboardPage() {
   }
 
   useEffect(() => {
-    api
-      .get<DashboardInsights>('/dashboard/insights')
-      .then(({ data }) => applyInsights(data))
-      .catch(() => resetInsights())
+    let cancelled = false
+
+    const loadInitialInsights = async () => {
+      try {
+        const { data } = await api.get<DashboardInsights>('/dashboard/insights')
+        if (!cancelled) applyInsights(data)
+      } catch {
+        if (!cancelled) resetInsights()
+      }
+    }
+
+    void loadInitialInsights()
+
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   const applyDateFilter = () => {

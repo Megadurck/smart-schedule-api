@@ -115,11 +115,19 @@ class DashboardRepository:
         return result
 
     def get_next_schedules(self, limit: int = 5) -> list[Schedule]:
+        """Retorna os próximos agendamentos ativos (pending ou confirmed) ordenados
+        cronologicamente a partir de hoje. Usado no painel de dashboard."""
+        today = date.today()
+        active_statuses = (ScheduleStatus.PENDING, ScheduleStatus.CONFIRMED)
         return (
             self.db.query(Schedule)
             .options(joinedload(Schedule.customer), joinedload(Schedule.professional))
-            .filter(Schedule.company_id == self.company_id)
-            .order_by(Schedule.date.desc(), Schedule.time.desc())
+            .filter(
+                Schedule.company_id == self.company_id,
+                Schedule.date >= today,
+                Schedule.status.in_(active_statuses),
+            )
+            .order_by(Schedule.date.asc(), Schedule.time.asc())
             .limit(limit)
             .all()
         )
