@@ -1,4 +1,5 @@
 import pytest
+from datetime import date, timedelta
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -7,6 +8,28 @@ from app.main import app
 client = TestClient(app)
 counter = [0]
 auth_counter = [0]
+
+
+def _next_weekday(target_weekday: int, weeks_ahead: int = 0) -> date:
+    """Return the next future date for a given weekday (0=Mon, 6=Sun)."""
+    today = date.today()
+    days = (target_weekday - today.weekday()) % 7
+    if days == 0:
+        days = 7
+    return today + timedelta(days=days + (weeks_ahead * 7))
+
+
+def _fmt(value: date) -> str:
+    return value.strftime("%d/%m/%Y")
+
+
+BASE_SCHEDULE_DATE = _next_weekday(1)  # Tuesday
+UPDATE_SCHEDULE_DATE = BASE_SCHEDULE_DATE + timedelta(days=2)  # Thursday
+CONFLICT_DATE = _next_weekday(4)  # Friday
+RECURRENT_DATE_1 = _next_weekday(1)
+RECURRENT_DATE_2 = RECURRENT_DATE_1 + timedelta(days=7)
+RECURRENT_START_DATE = RECURRENT_DATE_2 + timedelta(days=1)
+FALLBACK_START_DATE = _next_weekday(0)  # Monday
 
 
 def get_auth_headers(company_name: str = "empresa_schedule"):
@@ -44,7 +67,7 @@ def create_schedule(headers=None):
     minute = counter[0] % 60
     payload = {
         "customer_name": f"Cliente{counter[0]}",
-        "date": "02/06/2026",
+        "date": _fmt(BASE_SCHEDULE_DATE),
         "time": f"10:{minute:02d}:00",
     }
     response = client.post("/api/v1/schedule/", json=payload, headers=headers)
@@ -76,13 +99,13 @@ def test_read_schedule():
     data = response.json()
     assert data["id"] == created["id"]
     assert data["customer"]["name"].startswith("Cliente")
-    assert data["date"] == "2026-06-02"
+    assert data["date"] == BASE_SCHEDULE_DATE.isoformat()
     assert data["time"].startswith("10:")
 
 
 def test_create_schedule_json():
     headers = get_auth_headers("empresa_schedule")
-    payload = {"customer_name": "JsonUser", "date": "02/06/2026", "time": "09:00:00"}
+    payload = {"customer_name": "JsonUser", "date": _fmt(BASE_SCHEDULE_DATE), "time": "09:00:00"}
     response = client.post("/api/v1/schedule/", json=payload, headers=headers)
     assert response.status_code == 201
     data = response.json()
@@ -92,12 +115,12 @@ def test_create_schedule_json():
 def test_update_schedule_json():
     headers = get_auth_headers("empresa_schedule")
     created = create_schedule(headers=headers)
-    updated = {"customer_name": "JsonEdit", "date": "04/06/2026", "time": "11:00:00"}
+    updated = {"customer_name": "JsonEdit", "date": _fmt(UPDATE_SCHEDULE_DATE), "time": "11:00:00"}
     response = client.put(f"/api/v1/schedule/{created['id']}", json=updated, headers=headers)
     assert response.status_code == 200
     data = response.json()
     assert data["customer"]["name"] == "JsonEdit"
-    assert data["date"] == "2026-06-04"
+    assert data["date"] == UPDATE_SCHEDULE_DATE.isoformat()
     assert data["time"] == "11:00:00"
 
 
@@ -106,14 +129,14 @@ def test_update_schedule():
     created = create_schedule(headers=headers)
     updated_data = {
         "customer_name": "Maria",
-        "date": "04/06/2026",
+        "date": _fmt(UPDATE_SCHEDULE_DATE),
         "time": "14:00:00",
     }
     response = client.put(f"/api/v1/schedule/{created['id']}", json=updated_data, headers=headers)
     assert response.status_code == 200
     data = response.json()
     assert data["customer"]["name"] == "Maria"
-    assert data["date"] == "2026-06-04"
+    assert data["date"] == UPDATE_SCHEDULE_DATE.isoformat()
     assert data["time"] == "14:00:00"
 
 
@@ -231,7 +254,7 @@ def test_update_schedule_conflict():
 
     payload = {
         "customer_name": "Outro",
-        "date": "02/06/2026",
+        "date": _fmt(BASE_SCHEDULE_DATE),
         "time": a["time"],
     }
     response = client.put(f"/api/v1/schedule/{b['id']}", json=payload, headers=headers)
@@ -259,13 +282,13 @@ def test_schedule_allows_same_time_for_different_professionals():
 
     first = {
         "customer_name": "Cliente A",
-        "date": "05/06/2026",
+        "date": _fmt(CONFLICT_DATE),
         "time": "15:00:00",
         "professional_id": professional_a["id"],
     }
     second = {
         "customer_name": "Cliente B",
-        "date": "05/06/2026",
+        "date": _fmt(CONFLICT_DATE),
         "time": "15:00:00",
         "professional_id": professional_b["id"],
     }
@@ -291,13 +314,13 @@ def test_schedule_blocks_same_time_for_same_professional():
 
     first = {
         "customer_name": "Cliente A",
-        "date": "05/06/2026",
+        "date": _fmt(CONFLICT_DATE),
         "time": "16:00:00",
         "professional_id": professional["id"],
     }
     second = {
         "customer_name": "Cliente B",
-        "date": "05/06/2026",
+        "date": _fmt(CONFLICT_DATE),
         "time": "16:00:00",
         "professional_id": professional["id"],
     }
@@ -314,7 +337,7 @@ def test_schedule_conflict():
     headers = get_auth_headers("empresa_schedule")
     first = {
         "customer_name": "Joao Conflito",
-        "date": "05/06/2026",
+        "date": _fmt(CONFLICT_DATE),
         "time": "15:00:00",
     }
     response1 = client.post("/api/v1/schedule/", json=first, headers=headers)
@@ -322,7 +345,7 @@ def test_schedule_conflict():
 
     second = {
         "customer_name": "Maria Conflito",
-        "date": "05/06/2026",
+        "date": _fmt(CONFLICT_DATE),
         "time": "15:00:00",
     }
     response2 = client.post("/api/v1/schedule/", json=second, headers=headers)
@@ -333,7 +356,7 @@ def test_schedule_conflict():
 def test_create_schedule_requires_token():
     payload = {
         "customer_name": "SemToken",
-        "date": "02/06/2026",
+        "date": _fmt(BASE_SCHEDULE_DATE),
         "time": "10:00:00",
     }
     response = client.post("/api/v1/schedule/", json=payload)
@@ -347,8 +370,8 @@ def test_list_schedule_requires_token():
 
 def test_suggest_schedule_prefers_recurring_history():
     headers = get_auth_headers("empresa_schedule")
-    payload_1 = {"customer_name": "Cliente Recorrente", "date": "02/06/2026", "time": "10:00:00"}
-    payload_2 = {"customer_name": "Cliente Recorrente", "date": "09/06/2026", "time": "10:00:00"}
+    payload_1 = {"customer_name": "Cliente Recorrente", "date": _fmt(RECURRENT_DATE_1), "time": "10:00:00"}
+    payload_2 = {"customer_name": "Cliente Recorrente", "date": _fmt(RECURRENT_DATE_2), "time": "10:00:00"}
     response_1 = client.post("/api/v1/schedule/", json=payload_1, headers=headers)
     response_2 = client.post("/api/v1/schedule/", json=payload_2, headers=headers)
     assert response_1.status_code == 201
@@ -356,7 +379,7 @@ def test_suggest_schedule_prefers_recurring_history():
 
     suggestion_request = {
         "customer_name": "Cliente Recorrente",
-        "start_date": "10/06/2026",
+        "start_date": _fmt(RECURRENT_START_DATE),
         "limit": 3,
         "search_days": 30,
     }
@@ -369,7 +392,7 @@ def test_suggest_schedule_prefers_recurring_history():
     assert data["customer_name"] == "Cliente Recorrente"
     assert len(data["suggestions"]) >= 1
     assert data["suggestions"][0]["time"] == "10:00:00"
-    assert data["suggestions"][0]["date"] == "2026-06-16"
+    assert data["suggestions"][0]["date"] == (RECURRENT_DATE_2 + timedelta(days=7)).isoformat()
     assert data["suggestions"][0]["source"] == "history_preference"
 
 
@@ -377,7 +400,7 @@ def test_suggest_schedule_falls_back_to_next_available_without_history():
     headers = get_auth_headers("empresa_schedule")
     suggestion_request = {
         "customer_name": "Cliente Novo",
-        "start_date": "01/06/2026",
+        "start_date": _fmt(FALLBACK_START_DATE),
         "limit": 2,
         "search_days": 14,
     }
@@ -391,7 +414,7 @@ def test_suggest_schedule_falls_back_to_next_available_without_history():
     assert data["customer_name"] == "Cliente Novo"
     assert len(data["suggestions"]) == 2
     assert data["suggestions"][0]["source"] == "next_available"
-    assert data["suggestions"][0]["date"] == "2026-06-01"
+    assert data["suggestions"][0]["date"] == FALLBACK_START_DATE.isoformat()
 
 
 def test_schedule_isolated_between_companies():
@@ -412,12 +435,12 @@ def test_schedule_isolated_between_companies():
 
     first = {
         "customer_name": "Cliente A",
-        "date": "05/06/2026",
+        "date": _fmt(CONFLICT_DATE),
         "time": "16:00:00",
     }
     second = {
         "customer_name": "Cliente B",
-        "date": "05/06/2026",
+        "date": _fmt(CONFLICT_DATE),
         "time": "16:00:00",
     }
 

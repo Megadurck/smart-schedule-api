@@ -1,9 +1,16 @@
 from datetime import date as date_type, datetime, time, timedelta
 
 from agent.config import AGENT_COMPANY_NAME
+from app.core.dependencies import ScheduleBundle
 from app.database.session import Base, SessionLocal, engine
 from app.models.working_hours_model import WorkingHours
-from app.repositories import company_repository, schedule_repository
+from app.repositories import (
+    company_repository,
+    schedule_repository,
+    customer_repository,
+    professional_repository,
+    working_hours_repository,
+)
 from app.services import schedule_service
 
 
@@ -61,10 +68,20 @@ def list_available_slots(
 
 
 def create_schedule_offline(db, customer_name: str, schedule_date: str, schedule_time: str):
+	"""Create schedule using the proper ScheduleBundle"""
 	company_id = get_agent_company_id(db)
+	
+	# Criar repositórios
+	schedule_repo = schedule_repository.ScheduleRepository(db, company_id)
+	customer_repo = customer_repository.CustomerRepository(db, company_id)
+	professional_repo = professional_repository.ProfessionalRepository(db, company_id)
+	working_hours_repo = working_hours_repository.WorkingHoursRepository(db, company_id)
+	
+	# Criar bundle
+	bundle = ScheduleBundle(schedule_repo, customer_repo, professional_repo, working_hours_repo)
+	
 	return schedule_service.create_schedule(
-		db,
-		company_id=company_id,
+		bundle,
 		customer_name=customer_name,
 		date_str=schedule_date,
 		time_str=schedule_time,

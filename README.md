@@ -9,17 +9,37 @@
   <img src="https://img.shields.io/badge/TypeScript-6.x-3178C6?style=for-the-badge&logo=typescript&logoColor=white" />
   <img src="https://img.shields.io/badge/Vite-8.x-646CFF?style=for-the-badge&logo=vite&logoColor=white" />
   <img src="https://img.shields.io/badge/Tailwind_CSS-4.x-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white" />
+  <img src="https://img.shields.io/badge/Ollama-LLM-8B0000?style=for-the-badge" />
   <img src="https://img.shields.io/badge/Pytest-passing-brightgreen?style=for-the-badge&logo=pytest&logoColor=white" />
   <img src="https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/v2.0-LLM--Agent-blue?style=for-the-badge" />
 </p>
 
-> Plataforma completa de agendamentos para empresas de servicos — API REST robusta + painel web moderno com arquitetura multi-tenant.
+> Plataforma completa de agendamentos para empresas de servicos — API REST robusta + painel web moderno + agente conversacional com LLM local (Ollama).
+
+---
+
+## Versao 2.0 — Agente com LLM Local
+
+**Nova**: Agora o sistema inclui um assistente conversacional inteligente que interpreta linguagem natural em português e interage diretamente com a API de agendamentos. O agente roda localmente usando **Ollama**, sem dependência de APIs externas.
+
+### O que mudou
+
+| Feature | v1.0 | v2.0 |
+|---|---|---|
+| Interpretação de intenção | Pattern matching simples | LLM com Ollama (compreensão natural) |
+| Suporte para linguagem natural | Limitado (regex) | Completo em português |
+| Escalabilidade de novas ações | Manual (novos padrões) | Automática (LLM entende contexto) |
+| Dependência externa | Nenhuma | Ollama local (sem internet necessária) |
+| Confiança da interpretação | N/A | Métrica incluída (0-1) |
 
 ---
 
 ## Visao geral
 
 O Smart Schedule e uma solucao full-stack para gestao de agendamentos. Cada empresa possui seu proprio espaco isolado (multi-tenant), com controle total sobre clientes, profissionais, horarios de funcionamento e agenda. O painel web consome a API diretamente e oferece uma experiencia fluida para o dia a dia operacional.
+
+A partir da **v2.0**, um **agente conversacional com LLM local** permite que usuarios interajam com o sistema via linguagem natural, listando slots e agendando sem precisar acessar o painel web.
 
 ### Principais funcionalidades
 
@@ -32,7 +52,7 @@ O Smart Schedule e uma solucao full-stack para gestao de agendamentos. Cada empr
 | **Horarios** | Configuracao de horarios de funcionamento por dia da semana |
 | **Agenda** | Criacao, listagem e atualizacao de status de agendamentos |
 | **Dashboard** | Indicadores operacionais: receita total, ticket medio, agendamentos por profissional e proximos compromissos |
-| **Agente local** | Modulo de assistente conversacional para listagem de slots e criacao de agendamentos via linguagem natural |
+| **Agente LLM** | Assistente conversacional local para listar slots e criar agendamentos via linguagem natural (novo em v2.0) |
 
 ---
 
@@ -44,7 +64,14 @@ O Smart Schedule e uma solucao full-stack para gestao de agendamentos. Cada empr
 - **[Pydantic v2](https://docs.pydantic.dev/)** — validacao e serializacao de dados
 - **[python-jose](https://github.com/mpdavis/python-jose)** + **passlib** — autenticacao JWT com hash PBKDF2
 - **[python-dotenv](https://github.com/theskumar/python-dotenv)** — gerenciamento de variaveis de ambiente
+- **[httpx](https://www.python-httpx.org/)** — cliente HTTP async/sync (integracao Ollama)
 - **SQLite** — banco padrao para desenvolvimento local (facilmente substituível por PostgreSQL)
+
+### Agente LLM (v2.0)
+- **[Ollama](https://ollama.ai/)** — LLM local (sem dependência de APIs externas)
+- **Modelo dolphin-mixtral** — compreensao natural em português com excelente performance
+- **Prompt engineering** — extração de intenção e parâmetros em JSON estruturado
+- **Interpretação de linguagem natural** — suporta variações linguísticas e contexto
 
 ### Frontend
 - **[React 19](https://react.dev/)** + **[TypeScript](https://www.typescriptlang.org/)** — UI declarativa com tipagem forte
@@ -91,11 +118,15 @@ smart-schedule-api/
 │   ├── services/                 # Regras de negocio por dominio
 │   └── enum/                     # Enums: status de agendamento, dias da semana
 │
-├── agent/                        # Modulo de agente conversacional local
-│   ├── agent.py                  # Interpretacao de intencao e despacho de acoes
+├── agent/                        # Modulo de agente conversacional com LLM (v2.0)
+│   ├── agent.py                  # Interpretacao de intencao + despacho de acoes
+│   ├── llm.py                    # Cliente Ollama com suporte a JSON estruturado
+│   ├── openai_client.py          # Stub para integracao OpenAI (futura)
 │   ├── tools.py                  # Ferramentas: listar slots, criar agendamentos
-│   ├── config.py                 # Configuracao do provedor de LLM
-│   └── main.py                   # Entry point do agente (CLI)
+│   ├── prompts.py                # Prompts estruturados em português
+│   ├── config.py                 # Configuracao: endpoint, modelo, temperatura Ollama
+│   ├── setup.py                  # Setup/diagnóstico do Ollama (verifica instalação)
+│   └── main.py                   # Entry point do agente (CLI interativa)
 │
 ├── frontend/                     # Painel web React + TypeScript
 │   ├── src/
@@ -204,6 +235,149 @@ O painel web estara disponivel em `http://localhost:5173`.
 
 ---
 
+## 5. Agente Conversacional (v2.0) — Ollama
+
+O agente LLM permite interagir com o sistema via **linguagem natural em português**, sem precisar acessar o painel web. Roda **localmente** usando Ollama, garantindo privacidade e sem depender de APIs externas.
+
+### Pre-requisitos
+
+1. **Ollama instalado** — [Download](https://ollama.ai)
+2. **Modelo baixado localmente** — `dolphin-mixtral` recomendado (~8 GB)
+
+### Configurar o agente
+
+#### 1. Instalar Ollama
+Download em https://ollama.ai
+
+#### 2. Baixar o modelo
+```powershell
+ollama pull dolphin-mixtral
+```
+
+Ou usar outro modelo (mais rápido):
+```powershell
+ollama pull mistral
+ollama pull neural-chat
+ollama pull llama2
+```
+
+#### 3. Iniciar o servidor Ollama
+Em um terminal separado:
+```powershell
+ollama serve
+```
+
+Sera exibido algo como:
+```
+Listening on 127.0.0.1:11434
+```
+
+#### 4. Configurar `.env`
+Se usando modelo diferente, edite `.env`:
+```env
+AGENT_PROVIDER=ollama
+OLLAMA_ENDPOINT=http://localhost:11434
+OLLAMA_MODEL=dolphin-mixtral
+OLLAMA_TEMPERATURE=0.3
+```
+
+#### 5. Testar o agente
+```powershell
+python tests/test_ollama_agent.py
+```
+
+Voce vera algo como:
+```
+👤 Usuário: Quais são os horários para 03/03/2026?
+INFO:httpx:HTTP Request: POST http://localhost:11434/api/generate "HTTP/1.1 200 OK"
+INFO:agent.agent:Intent: list_slots (confidence: 1.00)
+🤖 Agent: Não encontrei horários disponíveis no período informado.
+```
+
+### Como funciona o fluxo
+
+```
+Usuário (Linguagem natural em português)
+  ↓
+Agente recebe mensagem
+  ↓
+OllamaClient faz requisição ao LLM
+  ↓
+LLM (dolphin-mixtral) interpreta e retorna JSON:
+  {
+    "action": "list_slots" | "create_schedule" | "help",
+    "date": "DD/MM/YYYY" ou null,
+    "customer_name": "Nome" ou null,
+    "time": "HH:MM:SS" ou null,
+    "confidence": 0.0 a 1.0
+  }
+  ↓
+Agent despacha ação
+  ↓
+Tools executam via repositórios/services
+  ↓
+Resposta formatada retorna ao usuário
+```
+
+### Exemplos de uso
+
+```
+Usuário: "Quais horários estão disponíveis para 03/03/2026?"
+→ Intent: list_slots, date: 03/03/2026
+→ Retorna: Lista de slots disponíveis
+
+Usuário: "Agendar Maria Silva em 05/03/2026 às 14:00"
+→ Intent: create_schedule, customer_name: Maria Silva, date: 05/03/2026, time: 14:00:00
+→ Retorna: Confirmação do agendamento
+
+Usuário: "Pode me mostrar os horários?"
+→ Intent: list_slots, date: null (usa data atual)
+→ Retorna: Lista de slots para os próximos 7 dias
+
+Usuário: "Oi, como funciona?"
+→ Intent: help
+→ Retorna: Mensagem de ajuda com exemplos
+```
+
+### Parar o agente
+Pressione `Ctrl+C` no terminal para encerrar.
+
+---
+
+## Arquitetura do Agente LLM
+
+### Componentes
+
+| Componente | Arquivo | Responsabilidade |
+|---|---|---|
+| **LLM Client** | `agent/llm.py` | Comunicação com Ollama, gerenciamento de prompts e parsing de JSON |
+| **Agent** | `agent/agent.py` | Orquestração de intent parsing, despacho de ações e tratamento de erros |
+| **Tools** | `agent/tools.py` | Interface com repositórios/services para listar slots e criar agendamentos |
+| **Config** | `agent/config.py` | Configuração: endpoint Ollama, modelo, temperatura, provider (ollama/openai/offline) |
+| **Prompts** | `agent/prompts.py` | Prompts estruturados em português com exemplos e formatos esperados |
+
+### Fluxo de decisão
+
+1. **Parsing de Intent**: O LLM analisa a mensagem e retorna um JSON estruturado com `action`, parâmetros e `confidence`
+2. **Validação**: Agente verifica se todos os parâmetros necessários foram extraídos
+3. **Execução**: Tools são acionadas via repositórios (schedule_repository, customer_repository, etc.)
+4. **Resposta**: Resultado formatado é retornado ao usuário
+5. **Fallback**: Se LLM falhar (timeout, erro), agent tenta padrão simples (pattern matching)
+
+### Configuração de provedor
+
+- **`AGENT_PROVIDER=ollama`** (padrão): Usa Ollama local
+- **`AGENT_PROVIDER=offline`**: Desativa LLM, usa apenas pattern matching simples
+- **`AGENT_PROVIDER=openai`** (futuro): Stub para integração OpenAI (não implementado ainda)
+
+### Performance
+
+- **Primeira requisição**: ~2-5s (modelo sendo carregado em RAM pelo Ollama)
+- **Requisições subsequentes**: ~0.5-1.5s (modelo já na memória)
+- **Timeout**: 300s padrão (para lentidão ou carregamento do modelo)
+
+---
+
 ## Endpoints da API
 
 Todos os endpoints (exceto `/auth/register` e `/auth/login`) exigem o header:
@@ -308,6 +482,35 @@ npm run build
 ```
 
 Os arquivos estaticos serao gerados em `frontend/dist/` e podem ser servidos por qualquer CDN ou servidor web (Nginx, Vercel, Netlify, etc.).
+
+---
+
+## Mudancas na v2.0
+
+### Adicoes
+
+- ✅ **Agente LLM com Ollama**: Interpretação de linguagem natural em português
+- ✅ **Cliente Ollama**: `agent/llm.py` com suporte a requisições JSON estruturadas
+- ✅ **Prompts estruturados**: `agent/prompts.py` com exemplos em português
+- ✅ **Ferramentas de agente**: `agent/tools.py` com integração a repositórios existentes
+- ✅ **Configuração flexível**: Suporte para Ollama, OpenAI (stub) e offline
+- ✅ **Testes**: `test_ollama_agent.py` para validar fluxo completo
+- ✅ **Documentação**: Guia completo de setup em `OLLAMA_AGENT_README.md`
+- ✅ **Métrica de confiança**: Cada intent inclui `confidence` (0-1)
+
+### Melhorias
+
+- 🔧 **Tratamento de erros robusto**: Fallback automático para pattern matching se LLM falhar
+- 🔧 **Respostas mais claras**: Mensagens de ajuda e exemplos mais detalhados
+- 🔧 **Timeout configurável**: 300s padrão para lentidão do modelo
+- 🔧 **Isolamento de tenant**: Agente respeita `AGENT_COMPANY_NAME` para isolamento multi-tenant
+
+### Compatibilidade
+
+- ✅ Totalmente retrocompatível com v1.0
+- ✅ Não altera endpoints da API
+- ✅ Não modifica modelos do banco
+- ✅ Apenas adiciona novo modulo `agent/` com opção de uso
 
 ---
 
