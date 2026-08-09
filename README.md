@@ -352,16 +352,18 @@ Pressione `Ctrl+C` no terminal para encerrar.
 |---|---|---|
 | **LLM Client** | `agent/llm.py` | Comunicação com Ollama, gerenciamento de prompts e parsing de JSON |
 | **Agent** | `agent/agent.py` | Orquestração de intent parsing, despacho de ações e tratamento de erros |
-| **Tools** | `agent/tools.py` | Interface com repositórios/services para listar slots e criar agendamentos |
-| **Config** | `agent/config.py` | Configuração: endpoint Ollama, modelo, temperatura, provider (ollama/openai/offline) |
+| **Tools** | `agent/tools.py` | Interface com o `ScheduleApiClient` para listar slots e criar agendamentos |
+| **API Client** | `agent/api_client.py` | Cliente HTTP (login/refresh JWT) que consome a Smart Schedule API — o agent não acessa mais o banco diretamente |
+| **WhatsApp Client** | `agent/whatsapp_client.py` | Envio de mensagens de resposta via Meta WhatsApp Cloud API |
+| **Config** | `agent/config.py` | Configuração: endpoint Ollama, modelo, temperatura, provider (ollama/openai/offline), credenciais da API e do WhatsApp |
 | **Prompts** | `agent/prompts.py` | Prompts estruturados em português com exemplos e formatos esperados |
 
 ### Fluxo de decisão
 
 1. **Parsing de Intent**: O LLM analisa a mensagem e retorna um JSON estruturado com `action`, parâmetros e `confidence`
 2. **Validação**: Agente verifica se todos os parâmetros necessários foram extraídos
-3. **Execução**: Tools são acionadas via repositórios (schedule_repository, customer_repository, etc.)
-4. **Resposta**: Resultado formatado é retornado ao usuário
+3. **Execução**: Tools chamam a Smart Schedule API via HTTP (`agent/api_client.py`), autenticando com um usuário/empresa dedicado do agent
+4. **Resposta**: Resultado formatado é retornado ao usuário (ou enviado de volta via WhatsApp, quando a mensagem vem do webhook)
 5. **Fallback**: Se LLM falhar (timeout, erro), agent tenta padrão simples (pattern matching)
 
 ### Configuração de provedor
@@ -511,6 +513,28 @@ Os arquivos estaticos serao gerados em `frontend/dist/` e podem ser servidos por
 - ✅ Não altera endpoints da API
 - ✅ Não modifica modelos do banco
 - ✅ Apenas adiciona novo modulo `agent/` com opção de uso
+
+---
+
+## 🚧 Em finalizacao — Integracao com WhatsApp (Meta Cloud API)
+
+**Status: em andamento.** O agente esta sendo adaptado para atender clientes diretamente pelo WhatsApp, usando a **Meta WhatsApp Cloud API** (numero de teste gratuito).
+
+### O que ja foi feito
+
+- ✅ O agent deixou de acessar o banco/services diretamente e agora consome a propria API via HTTP (`agent/api_client.py`), com login/refresh de JWT automatico
+- ✅ Novo endpoint `GET /api/v1/schedule/available-slots` para expor a listagem de horarios livres
+- ✅ Webhook do WhatsApp implementado em `app/api/v1/routers/whatsapp.py`:
+  - `GET /api/v1/whatsapp/webhook` — handshake de verificacao exigido pelo Meta
+  - `POST /api/v1/whatsapp/webhook` — recebe mensagens, valida a assinatura HMAC (`X-Hub-Signature-256`) e responde via `agent/whatsapp_client.py`
+- ✅ Validado localmente: suite de testes (77 testes), fluxo HTTP completo do agent e handshake/assinatura do webhook
+
+### O que falta (pre-requisitos manuais)
+
+- ⏳ Criar o app no [Meta for Developers](https://developers.meta.com) e obter o numero de teste do WhatsApp
+- ⏳ Preencher no `.env`: `META_VERIFY_TOKEN`, `META_WHATSAPP_TOKEN`, `META_PHONE_NUMBER_ID`, `META_APP_SECRET`
+- ⏳ Expor a API publicamente (ex.: `ngrok`) para registrar a URL do webhook no painel do Meta
+- ⏳ Teste real ponta a ponta enviando mensagens pelo WhatsApp
 
 ---
 

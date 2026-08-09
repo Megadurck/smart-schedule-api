@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, Query
 
 from app.core.dependencies import ScheduleBundle, get_schedule_bundle
 from app.schemas import (
+    AvailableSlotResponse,
     ScheduleCreate,
     ScheduleResponse,
     ScheduleStatusUpdate,
@@ -23,6 +24,20 @@ def list_schedules(
 ):
     """Lista agendamentos com paginação (skip/limit)"""
     return schedule_service.list_schedules(bundle, skip=skip, limit=limit)
+
+
+# 🔹 LISTAR HORÁRIOS DISPONÍVEIS
+@router.get("/available-slots", response_model=list[AvailableSlotResponse])
+def list_available_slots(
+    bundle: ScheduleBundle = Depends(get_schedule_bundle),
+    start_date: str | None = Query(default=None, description="DD/MM/YYYY"),
+    days_ahead: int = Query(default=7, ge=1, le=60),
+    limit: int = Query(default=8, ge=1, le=50),
+):
+    """Lista os próximos horários livres a partir de start_date (ou hoje)"""
+    return schedule_service.list_available_slots(
+        bundle, start_date=start_date, days_ahead=days_ahead, limit=limit
+    )
 
 
 # 🔹 OBTER AGENDAMENTO POR ID

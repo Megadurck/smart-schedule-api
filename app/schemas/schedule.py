@@ -95,3 +95,10 @@ class ScheduleSuggestionResponse(BaseModel):
 
     customer_name: str
     suggestions: list[ScheduleSuggestionItem]
+
+
+class AvailableSlotResponse(BaseModel):
+    """Representa um horário livre (data + hora) para agendamento."""
+
+    date: date
+    time: time

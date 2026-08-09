@@ -9,6 +9,7 @@ from app.schemas.schedule import (
     ScheduleSuggestionRequest,
     ScheduleSuggestionItem,
     ScheduleSuggestionResponse,
+    AvailableSlotResponse,
 )
 from app.schemas.customer import CustomerCreate, CustomerRecord, CustomerUpdate
 from app.schemas.professional import ProfessionalCreate, ProfessionalResponse, ProfessionalUpdate
@@ -32,6 +33,7 @@ __all__ = [
     "ScheduleSuggestionRequest",
     "ScheduleSuggestionItem",
     "ScheduleSuggestionResponse",
+    "AvailableSlotResponse",
     "WorkingHoursCreate",
     "WorkingHoursResponse",
     "CustomerCreate",

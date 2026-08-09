@@ -202,6 +202,37 @@ def _build_daily_slots(working_hours: WorkingHours) -> list[time]:
     return slots
 
 
+def list_available_slots(
+    bundle,
+    start_date: str | None = None,
+    days_ahead: int = 7,
+    limit: int = 8,
+) -> list[dict]:
+    """Lista os próximos horários livres a partir de ``start_date``."""
+    base_date = _parse_optional_start_date(start_date)
+    max_date = base_date + timedelta(days=max(days_ahead, 1))
+
+    working_hours_map = {
+        item.weekday: item
+        for item in bundle.working_hours.list_active()
+    }
+
+    slots: list[dict] = []
+    current_date = base_date
+    while current_date <= max_date and len(slots) < limit:
+        day_working_hours = working_hours_map.get(current_date.weekday())
+        if day_working_hours:
+            for slot in _build_daily_slots(day_working_hours):
+                if not bundle.schedules.check_conflict(current_date, slot, None):
+                    slots.append({"date": current_date, "time": slot})
+                    if len(slots) >= limit:
+                        break
+
+        current_date += timedelta(days=1)
+
+    return slots
+
+
 def suggest_schedules(
     bundle,
     customer_name: str,

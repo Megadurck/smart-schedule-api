@@ -70,7 +70,6 @@ def parse_intent_simple(message: str) -> dict:
 def handle_message(message: str) -> str:
     """Process user message and return response"""
     intent = parse_intent(message)
-    db = tools.get_db_session()
 
     try:
         action = intent.get("action")
@@ -81,7 +80,6 @@ def handle_message(message: str) -> str:
 
         if action == "list_slots":
             slots = tools.list_available_slots(
-                db,
                 start_date=intent.get("date"),
                 days_ahead=7,
                 limit=8,
@@ -106,15 +104,14 @@ def handle_message(message: str) -> str:
                     "Exemplo: 'Quero agendar Maria Silva em 03/03/2026 às 10:00'"
                 )
 
-            created = tools.create_schedule_offline(
-                db,
+            created = tools.create_schedule(
                 customer_name=customer_name,
                 schedule_date=schedule_date,
                 schedule_time=schedule_time,
             )
             return (
-                f"✓ Agendamento confirmado para {created.customer.name} em "
-                f"{created.date.strftime('%d/%m/%Y')} às {created.time.strftime('%H:%M')}."
+                f"✓ Agendamento confirmado para {created['customer_name']} em "
+                f"{created['date'].strftime('%d/%m/%Y')} às {created['time'].strftime('%H:%M')}."
             )
 
         # Default help
@@ -132,8 +129,6 @@ def handle_message(message: str) -> str:
     except Exception as e:
         logger.error(f"Erro inesperado: {e}")
         return "Desculpe, ocorreu um erro. Tente novamente."
-    finally:
-        db.close()
 
 
 # Funções auxiliares para fallback (pattern matching)
