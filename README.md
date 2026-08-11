@@ -121,7 +121,6 @@ smart-schedule-api/
 ├── agent/                        # Modulo de agente conversacional com LLM (v2.0)
 │   ├── agent.py                  # Interpretacao de intencao + despacho de acoes
 │   ├── llm.py                    # Cliente Ollama com suporte a JSON estruturado
-│   ├── openai_client.py          # Stub para integracao OpenAI (futura)
 │   ├── tools.py                  # Ferramentas: listar slots, criar agendamentos
 │   ├── prompts.py                # Prompts estruturados em português
 │   ├── config.py                 # Configuracao: endpoint, modelo, temperatura Ollama
@@ -355,7 +354,7 @@ Pressione `Ctrl+C` no terminal para encerrar.
 | **Tools** | `agent/tools.py` | Interface com o `ScheduleApiClient` para listar slots e criar agendamentos |
 | **API Client** | `agent/api_client.py` | Cliente HTTP (login/refresh JWT) que consome a Smart Schedule API — o agent não acessa mais o banco diretamente |
 | **WhatsApp Client** | `agent/whatsapp_client.py` | Envio de mensagens de resposta via Meta WhatsApp Cloud API |
-| **Config** | `agent/config.py` | Configuração: endpoint Ollama, modelo, temperatura, provider (ollama/openai/offline), credenciais da API e do WhatsApp |
+| **Config** | `agent/config.py` | Configuração: endpoint Ollama, modelo, temperatura, provider (ollama/offline), credenciais da API e do WhatsApp |
 | **Prompts** | `agent/prompts.py` | Prompts estruturados em português com exemplos e formatos esperados |
 
 ### Fluxo de decisão
@@ -370,7 +369,6 @@ Pressione `Ctrl+C` no terminal para encerrar.
 
 - **`AGENT_PROVIDER=ollama`** (padrão): Usa Ollama local
 - **`AGENT_PROVIDER=offline`**: Desativa LLM, usa apenas pattern matching simples
-- **`AGENT_PROVIDER=openai`** (futuro): Stub para integração OpenAI (não implementado ainda)
 
 ### Performance
 
@@ -495,7 +493,7 @@ Os arquivos estaticos serao gerados em `frontend/dist/` e podem ser servidos por
 - ✅ **Cliente Ollama**: `agent/llm.py` com suporte a requisições JSON estruturadas
 - ✅ **Prompts estruturados**: `agent/prompts.py` com exemplos em português
 - ✅ **Ferramentas de agente**: `agent/tools.py` com integração a repositórios existentes
-- ✅ **Configuração flexível**: Suporte para Ollama, OpenAI (stub) e offline
+- ✅ **Configuração flexível**: Suporte para Ollama e offline
 - ✅ **Testes**: `test_ollama_agent.py` para validar fluxo completo
 - ✅ **Documentação**: Guia completo de setup em `OLLAMA_AGENT_README.md`
 - ✅ **Métrica de confiança**: Cada intent inclui `confidence` (0-1)

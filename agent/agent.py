@@ -13,8 +13,6 @@ from agent import tools
 if AGENT_PROVIDER == "ollama":
     from agent.llm import OllamaClient
     from agent.prompts import SYSTEM_PROMPT, EXTRACTION_PROMPT_TEMPLATE
-elif AGENT_PROVIDER == "openai":
-    from agent.openai_client import OpenAIClient
 
 logger = logging.getLogger(__name__)
 
