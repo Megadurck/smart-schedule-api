@@ -15,13 +15,13 @@
   <img src="https://img.shields.io/badge/v2.0-LLM--Agent-blue?style=for-the-badge" />
 </p>
 
-> Plataforma completa de agendamentos para empresas de servicos — API REST robusta + painel web moderno + agente conversacional com LLM local (Ollama).
+> Plataforma completa de agendamentos para empresas de servicos — API REST robusta + painel web moderno + agente conversacional com LLM local (Ollama), integrado ao WhatsApp via Twilio Sandbox.
 
 ---
 
-## Versao 2.0 — Agente com LLM Local
+## Versao 2.0 — Agente com LLM Local e WhatsApp Twilio
 
-**Nova**: Agora o sistema inclui um assistente conversacional inteligente que interpreta linguagem natural em português e interage diretamente com a API de agendamentos. O agente roda localmente usando **Ollama**, sem dependência de APIs externas.
+**Hoje**: o sistema já inclui um assistente conversacional em português que interpreta mensagens, consulta a API de agendamentos e cria/cancela agendamentos com contexto do tenant da empresa. A integração com WhatsApp está funcionando via **Twilio Sandbox**, com webhook e envio de mensagens utilizando o número do sandbox configurado.
 
 ### O que mudou
 
@@ -52,7 +52,8 @@ A partir da **v2.0**, um **agente conversacional com LLM local** permite que usu
 | **Horarios** | Configuracao de horarios de funcionamento por dia da semana |
 | **Agenda** | Criacao, listagem e atualizacao de status de agendamentos |
 | **Dashboard** | Indicadores operacionais: receita total, ticket medio, agendamentos por profissional e proximos compromissos |
-| **Agente LLM** | Assistente conversacional local para listar slots e criar agendamentos via linguagem natural (novo em v2.0) |
+| **Agente LLM** | Assistente conversacional local para listar slots, criar e cancelar agendamentos via linguagem natural |
+| **WhatsApp / Twilio** | Integração com Twilio Sandbox para receber e responder mensagens de WhatsApp |
 
 ---
 
@@ -69,9 +70,14 @@ A partir da **v2.0**, um **agente conversacional com LLM local** permite que usu
 
 ### Agente LLM (v2.0)
 - **[Ollama](https://ollama.ai/)** — LLM local (sem dependência de APIs externas)
-- **Modelo dolphin-mixtral** — compreensao natural em português com excelente performance
+- **Modelo configurável** — suporte a modelos locais de conversa em português
 - **Prompt engineering** — extração de intenção e parâmetros em JSON estruturado
 - **Interpretação de linguagem natural** — suporta variações linguísticas e contexto
+
+### WhatsApp / Twilio
+- **[Twilio](https://www.twilio.com/)** — integração de mensagens WhatsApp via sandbox
+- **Webhook** — recebe mensagens do WhatsApp e encaminha para o agente
+- **Envio outbound** — respostas e confirmações enviadas via Twilio
 
 ### Frontend
 - **[React 19](https://react.dev/)** + **[TypeScript](https://www.typescriptlang.org/)** — UI declarativa com tipagem forte
@@ -353,8 +359,8 @@ Pressione `Ctrl+C` no terminal para encerrar.
 | **Agent** | `agent/agent.py` | Orquestração de intent parsing, despacho de ações e tratamento de erros |
 | **Tools** | `agent/tools.py` | Interface com o `ScheduleApiClient` para listar slots e criar agendamentos |
 | **API Client** | `agent/api_client.py` | Cliente HTTP (login/refresh JWT) que consome a Smart Schedule API — o agent não acessa mais o banco diretamente |
-| **WhatsApp Client** | `agent/whatsapp_client.py` | Envio de mensagens de resposta via Meta WhatsApp Cloud API |
-| **Config** | `agent/config.py` | Configuração: endpoint Ollama, modelo, temperatura, provider (ollama/offline), credenciais da API e do WhatsApp |
+| **WhatsApp Client** | `agent/whatsapp_client.py` | Envio de mensagens de resposta via Twilio WhatsApp Sandbox |
+| **Config** | `agent/config.py` | Configuração: endpoint Ollama, modelo, temperatura, provider (ollama/offline), credenciais da API e do Twilio |
 | **Prompts** | `agent/prompts.py` | Prompts estruturados em português com exemplos e formatos esperados |
 
 ### Fluxo de decisão
@@ -362,7 +368,7 @@ Pressione `Ctrl+C` no terminal para encerrar.
 1. **Parsing de Intent**: O LLM analisa a mensagem e retorna um JSON estruturado com `action`, parâmetros e `confidence`
 2. **Validação**: Agente verifica se todos os parâmetros necessários foram extraídos
 3. **Execução**: Tools chamam a Smart Schedule API via HTTP (`agent/api_client.py`), autenticando com um usuário/empresa dedicado do agent
-4. **Resposta**: Resultado formatado é retornado ao usuário (ou enviado de volta via WhatsApp, quando a mensagem vem do webhook)
+4. **Resposta**: Resultado formatado é retornado ao usuário (ou enviado de volta via WhatsApp pelo webhook do Twilio)
 5. **Fallback**: Se LLM falhar (timeout, erro), agent tenta padrão simples (pattern matching)
 
 ### Configuração de provedor
@@ -514,25 +520,38 @@ Os arquivos estaticos serao gerados em `frontend/dist/` e podem ser servidos por
 
 ---
 
-## 🚧 Em finalizacao — Integracao com WhatsApp (Meta Cloud API)
+## Status atual — WhatsApp + Twilio Sandbox
 
-**Status: em andamento.** O agente esta sendo adaptado para atender clientes diretamente pelo WhatsApp, usando a **Meta WhatsApp Cloud API** (numero de teste gratuito).
+**Status: validado em ambiente local e pronto para refinamento do agente.** O fluxo de WhatsApp está integrado com **Twilio Sandbox**, e o agente já conversa com a API e cria/agendamentos corretamente.
 
-### O que ja foi feito
+### O que ja foi validado
 
-- ✅ O agent deixou de acessar o banco/services diretamente e agora consome a propria API via HTTP (`agent/api_client.py`), com login/refresh de JWT automatico
-- ✅ Novo endpoint `GET /api/v1/schedule/available-slots` para expor a listagem de horarios livres
-- ✅ Webhook do WhatsApp implementado em `app/api/v1/routers/whatsapp.py`:
-  - `GET /api/v1/whatsapp/webhook` — handshake de verificacao exigido pelo Meta
-  - `POST /api/v1/whatsapp/webhook` — recebe mensagens, valida a assinatura HMAC (`X-Hub-Signature-256`) e responde via `agent/whatsapp_client.py`
-- ✅ Validado localmente: suite de testes (77 testes), fluxo HTTP completo do agent e handshake/assinatura do webhook
+- ✅ Agent deixa de acessar o banco/services diretamente e consome a API via HTTP (`agent/api_client.py`), com login/refresh de JWT automatico
+- ✅ Endpoint `GET /api/v1/schedule/available-slots` funcionando para listar slots livres
+- ✅ Webhook do WhatsApp implementado em `app/api/v1/routers/whatsapp.py` com processamento de mensagens do Twilio
+- ✅ Envio de respostas via `agent/whatsapp_client.py` usando o número configurado no Twilio Sandbox
+- ✅ Fluxo de listagem de horários e criação de agendamento validado em testes e no uso prático
+- ✅ Multi-tenant funcionando com empresa/tenant isolado por `company_id`
+- ✅ Agente com respostas mais naturais e sem recorrer a erro bruto quando o horário está fora do funcionamento
 
-### O que falta (pre-requisitos manuais)
+### O que ainda falta para amanhã
 
-- ⏳ Criar o app no [Meta for Developers](https://developers.meta.com) e obter o numero de teste do WhatsApp
-- ⏳ Preencher no `.env`: `META_VERIFY_TOKEN`, `META_WHATSAPP_TOKEN`, `META_PHONE_NUMBER_ID`, `META_APP_SECRET`
-- ⏳ Expor a API publicamente (ex.: `ngrok`) para registrar a URL do webhook no painel do Meta
-- ⏳ Teste real ponta a ponta enviando mensagens pelo WhatsApp
+- ⏳ Refinar prompts e reduzir alucinações do agente
+- ⏳ Testar outros fluxos de mensagem (cancelamento, consulta por profissional, horários fora de expediente, múltiplos clientes)
+- ⏳ Melhorar mensagens do WhatsApp para manter o formato mais humano e consistente
+- ⏳ Ajustar detalhes finos de UX no painel para empresa/admin
+
+### Variaveis de ambiente do WhatsApp/Twilio
+
+No `.env`, o setup atual usa:
+
+```env
+TWILIO_ACCOUNT_SID=...
+TWILIO_AUTH_TOKEN=...
+TWILIO_WHATSAPP_FROM=whatsapp:+14155238886
+```
+
+E o fluxo de webhook exige expor a API publicamente com `ngrok` para registrar a URL do webhook no painel do Twilio.
 
 ---
 
