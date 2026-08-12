@@ -55,6 +55,10 @@ def ensure_company_admin_columns():
                     "ALTER TABLE companies ADD COLUMN average_ticket_amount FLOAT NOT NULL DEFAULT 100"
                 )
             )
+        if "bot_name" not in existing_columns:
+            conn.execute(text("ALTER TABLE companies ADD COLUMN bot_name VARCHAR"))
+        if "whatsapp_number" not in existing_columns:
+            conn.execute(text("ALTER TABLE companies ADD COLUMN whatsapp_number VARCHAR"))
 
 
 def ensure_schedule_constraints():

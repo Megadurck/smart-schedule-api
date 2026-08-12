@@ -7,6 +7,8 @@ class CompanyAdminSettingsUpdate(BaseModel):
     default_timezone: str = "America/Sao_Paulo"
     reminder_lead_minutes: int = Field(default=120, ge=0, le=10080)
     average_ticket_amount: float = Field(default=100.0, ge=0)
+    bot_name: str | None = None
+    whatsapp_number: str | None = None
 
 
 class CompanyAdminSettingsResponse(BaseModel):
@@ -17,5 +19,7 @@ class CompanyAdminSettingsResponse(BaseModel):
     default_timezone: str
     reminder_lead_minutes: int
     average_ticket_amount: float
+    bot_name: str | None = None
+    whatsapp_number: str | None = None
 
     model_config = {"from_attributes": True}

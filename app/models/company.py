@@ -14,6 +14,8 @@ class Company(Base):
     default_timezone = Column(String, nullable=False, default="America/Sao_Paulo")
     reminder_lead_minutes = Column(Integer, nullable=False, default=120)
     average_ticket_amount = Column(Float, nullable=False, default=100.0)
+    bot_name = Column(String, nullable=True)
+    whatsapp_number = Column(String, nullable=True)
 
     users = relationship("User", back_populates="company")
     customers = relationship("Customer", back_populates="company")

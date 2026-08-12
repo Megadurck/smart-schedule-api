@@ -35,4 +35,6 @@ def update_company_admin(
         default_timezone=payload.default_timezone,
         reminder_lead_minutes=payload.reminder_lead_minutes,
         average_ticket_amount=payload.average_ticket_amount,
+        bot_name=payload.bot_name,
+        whatsapp_number=payload.whatsapp_number,
     )

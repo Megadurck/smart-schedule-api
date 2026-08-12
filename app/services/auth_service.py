@@ -11,12 +11,22 @@ from app.core.security import (
 from app.repositories import company_repository, user_repository
 
 
+def _resolve_company_name(db: Session, company_name: str | None) -> str:
+    resolved = (company_name or "").strip()
+    if resolved:
+        return resolved
+
+    first_company = db.query(company_repository.Company).order_by(company_repository.Company.id.asc()).first()
+    return first_company.name if first_company else "default"
+
+
 def register_user_credentials(
     db: Session,
-    company_name: str,
+    company_name: str | None,
     user_name: str,
     password: str,
 ):
+    company_name = _resolve_company_name(db, company_name)
     company = company_repository.find_or_create_company(db, company_name)
     user = user_repository.get_user_by_name(db, user_name, company.id)
 
@@ -36,7 +46,8 @@ def register_user_credentials(
     return _build_token_response(user)
 
 
-def login(db: Session, company_name: str, user_name: str, password: str):
+def login(db: Session, company_name: str | None, user_name: str, password: str):
+    company_name = _resolve_company_name(db, company_name)
     company = company_repository.get_company_by_name(db, company_name)
     if not company:
         raise HTTPException(

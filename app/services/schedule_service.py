@@ -206,7 +206,7 @@ def list_available_slots(
     bundle,
     start_date: str | None = None,
     days_ahead: int = 7,
-    limit: int = 8,
+    limit: int = 200,
 ) -> list[dict]:
     """Lista os próximos horários livres a partir de ``start_date``."""
     base_date = _parse_optional_start_date(start_date)

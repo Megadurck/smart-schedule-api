@@ -75,10 +75,14 @@ def test_dashboard_insights_returns_revenue_totals_and_by_professional():
             "default_timezone": "America/Sao_Paulo",
             "reminder_lead_minutes": 120,
             "average_ticket_amount": 150,
+            "bot_name": "Bot Agenda Prime",
+            "whatsapp_number": "+5511999998888",
         },
         headers=headers,
     )
     assert company_update.status_code == 200
+    assert company_update.json()["bot_name"] == "Bot Agenda Prime"
+    assert company_update.json()["whatsapp_number"] == "+5511999998888"
 
     response = client.get("/api/v1/dashboard/insights", headers=headers)
     assert response.status_code == 200

@@ -15,6 +15,8 @@ type CompanyLocalSettings = {
   defaultTimezone: string
   reminderLeadMinutes: string
   averageTicketAmount: string
+  botName: string
+  whatsappNumber: string
 }
 
 export default function CompanyAdminPage() {
@@ -28,6 +30,8 @@ export default function CompanyAdminPage() {
     defaultTimezone: 'America/Sao_Paulo',
     reminderLeadMinutes: '120',
     averageTicketAmount: '100',
+    botName: '',
+    whatsappNumber: '',
   })
 
   useEffect(() => {
@@ -46,6 +50,8 @@ export default function CompanyAdminPage() {
           defaultTimezone: data.default_timezone ?? 'America/Sao_Paulo',
           reminderLeadMinutes: String(data.reminder_lead_minutes ?? 120),
           averageTicketAmount: String(data.average_ticket_amount ?? 100),
+          botName: data.bot_name ?? '',
+          whatsappNumber: data.whatsapp_number ?? '',
         })
       } catch {
         if (!cancelled) setError('Não foi possível carregar configurações da empresa.')
@@ -71,6 +77,8 @@ export default function CompanyAdminPage() {
         default_timezone: settings.defaultTimezone,
         reminder_lead_minutes: Number(settings.reminderLeadMinutes),
         average_ticket_amount: Number(settings.averageTicketAmount),
+        bot_name: settings.botName || null,
+        whatsapp_number: settings.whatsappNumber || null,
       })
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
@@ -152,6 +160,26 @@ export default function CompanyAdminPage() {
               onChange={(e) =>
                 setSettings((prev) => ({ ...prev, averageTicketAmount: e.target.value }))
               }
+            />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="botName">Nome do bot</Label>
+            <Input
+              id="botName"
+              value={settings.botName}
+              onChange={(e) => setSettings((prev) => ({ ...prev, botName: e.target.value }))}
+              placeholder="Ex.: Bot Agenda Barber"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="whatsappNumber">WhatsApp para atendimento</Label>
+            <Input
+              id="whatsappNumber"
+              value={settings.whatsappNumber}
+              onChange={(e) =>
+                setSettings((prev) => ({ ...prev, whatsappNumber: e.target.value }))
+              }
+              placeholder="Ex.: +5511999998888"
             />
           </div>
           <div className="md:col-span-2 flex items-center gap-3">

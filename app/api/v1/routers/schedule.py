@@ -32,7 +32,7 @@ def list_available_slots(
     bundle: ScheduleBundle = Depends(get_schedule_bundle),
     start_date: str | None = Query(default=None, description="DD/MM/YYYY"),
     days_ahead: int = Query(default=7, ge=1, le=60),
-    limit: int = Query(default=8, ge=1, le=50),
+    limit: int = Query(default=200, ge=1, le=5000),
 ):
     """Lista os próximos horários livres a partir de start_date (ou hoje)"""
     return schedule_service.list_available_slots(

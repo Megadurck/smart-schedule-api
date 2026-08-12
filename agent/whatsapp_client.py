@@ -1,45 +1,27 @@
-"""
-Client for sending outbound messages via the Meta WhatsApp Cloud API.
-"""
 import logging
+import os
 
-import httpx
-
-from agent.config import (
-    META_API_VERSION,
-    META_PHONE_NUMBER_ID,
-    META_WHATSAPP_TOKEN,
-)
+from twilio.rest import Client
 
 logger = logging.getLogger(__name__)
 
 
 def send_whatsapp_message(to: str, body: str) -> None:
-    """Envia uma mensagem de texto para o número informado via Graph API."""
-    if not META_WHATSAPP_TOKEN or not META_PHONE_NUMBER_ID:
-        logger.error(
-            "META_WHATSAPP_TOKEN ou META_PHONE_NUMBER_ID nao configurados; "
-            "mensagem nao enviada."
-        )
+    account_sid = os.getenv("TWILIO_ACCOUNT_SID", "").strip()
+    auth_token = os.getenv("TWILIO_AUTH_TOKEN", "").strip()
+    from_number = os.getenv("TWILIO_WHATSAPP_FROM", "").strip()
+
+    if not account_sid or not auth_token or not from_number:
+        logger.error("Twilio nao configurado; mensagem nao enviada.")
         return
 
-    url = f"https://graph.facebook.com/{META_API_VERSION}/{META_PHONE_NUMBER_ID}/messages"
-    payload = {
-        "messaging_product": "whatsapp",
-        "to": to,
-        "type": "text",
-        "text": {"body": body},
-    }
-    headers = {"Authorization": f"Bearer {META_WHATSAPP_TOKEN}"}
-
     try:
-        with httpx.Client(timeout=15.0) as client:
-            response = client.post(url, json=payload, headers=headers)
-            response.raise_for_status()
-    except httpx.HTTPStatusError as exc:
-        logger.error(
-            f"Falha ao enviar mensagem WhatsApp ({exc.response.status_code}): "
-            f"{exc.response.text}"
+        client = Client(account_sid, auth_token)
+        client.messages.create(
+            body=body,
+            from_=from_number,
+            to=f"whatsapp:{to}"
         )
-    except httpx.HTTPError as exc:
-        logger.error(f"Falha ao enviar mensagem WhatsApp: {exc}")
+        logger.info("Mensagem enviada via Twilio WhatsApp.")
+    except Exception as exc:
+        logger.error(f"Falha ao enviar mensagem via Twilio: {exc}")

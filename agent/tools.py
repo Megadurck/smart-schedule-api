@@ -21,10 +21,18 @@ def get_api_client() -> ScheduleApiClient:
 def list_available_slots(
 	start_date: str | None,
 	days_ahead: int = 7,
-	limit: int = 8,
+	limit: int = 200,
 ) -> list[dict]:
 	return get_api_client().list_available_slots(start_date, days_ahead=days_ahead, limit=limit)
 
 
+def list_schedules(skip: int = 0, limit: int = 20) -> list[dict]:
+	return get_api_client().list_schedules(skip=skip, limit=limit)
+
+
 def create_schedule(customer_name: str, schedule_date: str, schedule_time: str) -> dict:
 	return get_api_client().create_schedule(customer_name, schedule_date, schedule_time)
+
+
+def delete_schedule(schedule_id: int) -> None:
+	return get_api_client().delete_schedule(schedule_id)

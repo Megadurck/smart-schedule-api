@@ -13,7 +13,6 @@ from agent.config import (
     AGENT_API_BASE_URL,
     AGENT_API_USER,
     AGENT_API_PASSWORD,
-    AGENT_COMPANY_NAME,
 )
 
 logger = logging.getLogger(__name__)
@@ -25,7 +24,7 @@ class ScheduleApiClient:
     def __init__(
         self,
         base_url: str = AGENT_API_BASE_URL,
-        company_name: str = AGENT_COMPANY_NAME,
+        company_name: str | None = None,
         user_name: str = AGENT_API_USER,
         password: str = AGENT_API_PASSWORD,
     ):
@@ -40,11 +39,14 @@ class ScheduleApiClient:
     # Autenticação
     # ------------------------------------------------------------------
     def _credentials_payload(self) -> dict:
-        return {
-            "company_name": self.company_name,
+        payload = {
             "user_name": self.user_name,
             "password": self.password,
         }
+        tenant_name = (self.company_name or "").strip()
+        if tenant_name:
+            payload["company_name"] = tenant_name
+        return payload
 
     def _login(self) -> None:
         response = self.client.post("/auth/login", json=self._credentials_payload())
@@ -116,7 +118,7 @@ class ScheduleApiClient:
         self,
         start_date: Optional[str] = None,
         days_ahead: int = 7,
-        limit: int = 8,
+        limit: int = 200,
     ) -> list[dict]:
         params = {"days_ahead": days_ahead, "limit": limit}
         if start_date:
@@ -133,6 +135,11 @@ class ScheduleApiClient:
             for item in response.json()
         ]
 
+    def list_schedules(self, skip: int = 0, limit: int = 20) -> list[dict]:
+        response = self._request("GET", "/schedule/", params={"skip": skip, "limit": limit})
+        self._raise_for_api_error(response)
+        return response.json()
+
     def create_schedule(self, customer_name: str, date_str: str, time_str: str) -> dict:
         response = self._request(
             "POST",
@@ -147,6 +154,11 @@ class ScheduleApiClient:
             "date": datetime.strptime(payload["date"], "%Y-%m-%d").date(),
             "time": time.fromisoformat(payload["time"]),
         }
+
+    def delete_schedule(self, schedule_id: int) -> None:
+        response = self._request("DELETE", f"/schedule/{schedule_id}")
+        self._raise_for_api_error(response)
+        return None
 
     def close(self) -> None:
         self.client.close()

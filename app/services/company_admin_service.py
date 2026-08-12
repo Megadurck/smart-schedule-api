@@ -17,6 +17,8 @@ def get_company_admin_settings(db: Session, company_id: int):
         "default_timezone": company.default_timezone,
         "reminder_lead_minutes": company.reminder_lead_minutes,
         "average_ticket_amount": company.average_ticket_amount,
+        "bot_name": company.bot_name,
+        "whatsapp_number": company.whatsapp_number,
     }
 
 
@@ -28,6 +30,8 @@ def update_company_admin_settings(
     default_timezone: str,
     reminder_lead_minutes: int,
     average_ticket_amount: float,
+    bot_name: str | None,
+    whatsapp_number: str | None,
 ):
     company = company_repository.get_company_by_id(db, company_id)
     if not company:
@@ -41,6 +45,8 @@ def update_company_admin_settings(
         default_timezone=default_timezone,
         reminder_lead_minutes=reminder_lead_minutes,
         average_ticket_amount=average_ticket_amount,
+        bot_name=bot_name,
+        whatsapp_number=whatsapp_number,
     )
 
     return {
@@ -51,4 +57,6 @@ def update_company_admin_settings(
         "default_timezone": updated.default_timezone,
         "reminder_lead_minutes": updated.reminder_lead_minutes,
         "average_ticket_amount": updated.average_ticket_amount,
+        "bot_name": updated.bot_name,
+        "whatsapp_number": updated.whatsapp_number,
     }

@@ -29,6 +29,18 @@ def test_register_and_login_flow():
     assert "refresh_token" in login_data
 
 
+def test_register_without_company_name_uses_default_company():
+    payload = {
+        "user_name": "usuario_sem_empresa",
+        "password": "senha123",
+    }
+
+    response = client.post("/api/v1/auth/register", json=payload)
+    assert response.status_code == 201
+    assert "access_token" in response.json()
+    assert "refresh_token" in response.json()
+
+
 def test_register_existing_credentials_returns_conflict():
     payload = {
         "company_name": "empresa_dup",

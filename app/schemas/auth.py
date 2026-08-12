@@ -2,13 +2,13 @@ from pydantic import BaseModel, Field
 
 
 class AuthRegister(BaseModel):
-    company_name: str
+    company_name: str | None = None
     user_name: str
     password: str = Field(min_length=6)
 
 
 class AuthLogin(BaseModel):
-    company_name: str
+    company_name: str | None = None
     user_name: str
     password: str = Field(min_length=6)
 
