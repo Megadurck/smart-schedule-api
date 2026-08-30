@@ -22,7 +22,7 @@ export default function AppShell() {
   }
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.16),_transparent_28%),_linear-gradient(180deg,_#f4f7fb_0%,_#eef2ff_100%)] dark:bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.18),_transparent_24%),_linear-gradient(180deg,_#020817_0%,_#0f172a_100%)]">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(99,102,241,0.16),transparent_28%),linear-gradient(180deg,#f4f7fb_0%,#eef2ff_100%)] dark:bg-[radial-gradient(circle_at_top,rgba(99,102,241,0.18),transparent_24%),linear-gradient(180deg,#020817_0%,#0f172a_100%)]">
       <header className="sticky top-0 z-20 border-b border-border/60 bg-background/75 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 pr-24 sm:px-6 sm:pr-28">
           <div>
@@ -58,7 +58,7 @@ export default function AppShell() {
                 className={({ isActive }) =>
                   `rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
                     isActive
-                      ? 'bg-gradient-to-r from-slate-900 to-indigo-700 text-white shadow-lg shadow-indigo-500/20 dark:from-indigo-500 dark:to-violet-500'
+                      ? 'bg-linear-to-r from-slate-900 to-indigo-700 text-white shadow-lg shadow-indigo-500/20 dark:from-indigo-500 dark:to-violet-500'
                       : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                   }`
                 }

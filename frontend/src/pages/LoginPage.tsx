@@ -44,9 +44,9 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.22),_transparent_18%),linear-gradient(180deg,_#f8fafc_0%,_#eef2ff_100%)] px-4 py-8 dark:bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.2),_transparent_16%),linear-gradient(180deg,_#020817_0%,_#0f172a_100%)]">
+    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,rgba(99,102,241,0.22),transparent_18%),linear-gradient(180deg,#f8fafc_0%,#eef2ff_100%)] px-4 py-8 dark:bg-[radial-gradient(circle_at_top,rgba(99,102,241,0.2),transparent_16%),linear-gradient(180deg,#020817_0%,#0f172a_100%)]">
       <Card className="w-full max-w-md overflow-hidden border border-slate-200/80 bg-white/80 shadow-[0_30px_80px_rgba(79,70,229,0.15)] backdrop-blur-xl dark:border-slate-700 dark:bg-slate-900/80 dark:shadow-[0_30px_80px_rgba(2,6,23,0.45)]">
-        <div className="bg-gradient-to-r from-indigo-600 via-violet-600 to-sky-500 px-6 py-6 text-white">
+        <div className="bg-linear-to-r from-indigo-600 via-violet-600 to-sky-500 px-6 py-6 text-white">
           <p className="text-xs font-medium uppercase tracking-[0.28em] text-indigo-100">Smart Schedule</p>
           <h1 className="mt-2 text-3xl font-bold tracking-tight">Bem-vindo</h1>
         </div>
@@ -122,7 +122,7 @@ export default function LoginPage() {
           </CardContent>
 
           <CardFooter className="flex flex-col gap-3 px-6 pb-6 pt-4">
-            <Button type="submit" className="h-11 w-full rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-lg shadow-indigo-500/20" disabled={isSubmitting}>
+            <Button type="submit" className="h-11 w-full rounded-xl bg-linear-to-r from-indigo-600 to-violet-600 text-white shadow-lg shadow-indigo-500/20" disabled={isSubmitting}>
               {isSubmitting ? 'Entrando…' : 'Entrar'}
             </Button>
             <Link to="/" className="text-center text-sm text-muted-foreground hover:underline">

@@ -42,11 +42,11 @@ const features = [
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(129,140,248,0.22),_transparent_18%),linear-gradient(180deg,_#f8fafc_0%,_#eef2ff_100%)] text-foreground dark:bg-[radial-gradient(circle_at_top,_rgba(129,140,248,0.2),_transparent_16%),linear-gradient(180deg,_#020817_0%,_#0f172a_100%)]">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(129,140,248,0.22),transparent_18%),linear-gradient(180deg,#f8fafc_0%,#eef2ff_100%)] text-foreground dark:bg-[radial-gradient(circle_at_top,rgba(129,140,248,0.2),transparent_16%),linear-gradient(180deg,#020817_0%,#0f172a_100%)]">
       <div className="mx-auto max-w-7xl px-4 pb-20 pt-10 sm:px-6 lg:px-8">
         <header className="mb-16 flex items-center justify-between rounded-full border border-white/30 bg-white/60 px-4 py-3 shadow-lg shadow-indigo-500/5 backdrop-blur-md dark:border-slate-700/60 dark:bg-slate-900/40">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 to-violet-500 text-sm font-bold text-white shadow-lg shadow-indigo-500/30">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-linear-to-br from-indigo-600 to-violet-500 text-sm font-bold text-white shadow-lg shadow-indigo-500/30">
               S
             </div>
             <div>
@@ -85,7 +85,7 @@ export default function LandingPage() {
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Link
                 to="/register"
-                className="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:scale-[1.01]"
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-linear-to-r from-indigo-600 to-violet-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:scale-[1.01]"
               >
                 Cadastrar minha empresa
                 <ArrowRight className="h-4 w-4" />
@@ -162,7 +162,7 @@ export default function LandingPage() {
                 key={title}
                 className="rounded-2xl border border-slate-200 bg-white/70 p-5 shadow-sm backdrop-blur-sm transition hover:-translate-y-1 hover:shadow-xl dark:border-slate-700 dark:bg-slate-900/60"
               >
-                <div className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 text-white shadow-md shadow-indigo-500/20">
+                <div className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-xl bg-linear-to-br from-indigo-500 to-violet-500 text-white shadow-md shadow-indigo-500/20">
                   <Icon className="h-5 w-5" />
                 </div>
                 <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{title}</h3>
@@ -174,7 +174,7 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section id="benefits" className="mt-16 rounded-[28px] border border-slate-200 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-8 text-white shadow-[0_30px_80px_rgba(15,23,42,0.35)]">
+        <section id="benefits" className="mt-16 rounded-[28px] border border-slate-200 bg-linear-to-r from-slate-900 via-indigo-950 to-slate-900 p-8 text-white shadow-[0_30px_80px_rgba(15,23,42,0.35)]">
           <div className="grid gap-8 lg:grid-cols-[1fr_0.8fr] lg:items-center">
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.25em] text-indigo-200">
