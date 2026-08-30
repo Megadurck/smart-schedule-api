@@ -1,4 +1,6 @@
+import os
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from contextlib import asynccontextmanager
 from app.api.v1 import api_router
@@ -26,6 +28,17 @@ async def lifespan(app: FastAPI):
     # Shutdown: (nada por enquanto)
 
 app = FastAPI(title="Smart Schedule API", lifespan=lifespan)
+
+allowed_origins = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",")
+allowed_origins = [origin.strip() for origin in allowed_origins if origin.strip()]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Redireciona a raiz "/" para a documentação automática do Swagger
 @app.get("/", include_in_schema=False)

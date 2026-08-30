@@ -1,15 +1,17 @@
+import os
 from sqlalchemy import create_engine
 from sqlalchemy import text
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-# URL do banco de dados SQLite
-SQLALCHEMY_DATABASE_URL = "sqlite:///./smart_schedule.db"
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./smart_schedule.db")
+
+connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
 
 # Cria o engine do SQLAlchemy
 engine = create_engine(
-    SQLALCHEMY_DATABASE_URL,
-    connect_args={"check_same_thread": False}  # Necessário apenas para SQLite
+    DATABASE_URL,
+    connect_args=connect_args,
 )
 
 # Cria uma classe SessionLocal para gerenciar sessões
