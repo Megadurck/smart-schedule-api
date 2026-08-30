@@ -17,6 +17,41 @@
 
 > Plataforma completa de agendamentos para empresas de servicos — API REST robusta + painel web moderno + agente conversacional com LLM local (Ollama), integrado ao WhatsApp via Twilio Sandbox.
 
+## Implementacoes recentes
+
+A plataforma foi evoluida para uma experiencia mais premium e operacional, com foco em usabilidade, clareza visual e fluxo de cadastro/uso para empresas de servicos.
+
+### O que foi entregue
+- Landing page moderna com proposta de valor, recursos e CTA claros
+- Fluxo de login e cadastro com identidade visual consistente e dark mode
+- Dashboard com cards de indicadores e filtros de periodo por datas
+- Ajustes de layout para evitar sobreposicao de botoes e melhorar espaco em telas diversas
+- Melhoras na navegacao do app shell, mantendo um visual limpo e profissional
+- Integracao com API de agendamentos, clientes, profissionais e horarios em contexto multi-tenant
+- Suporte a assistente local com LLM e integracao WhatsApp/Twilio
+
+### Status atual
+- Backend em FastAPI funcionando em ambiente local
+- Frontend em React + Vite com UI refinada e responsiva
+- Banco local SQLite em uso para desenvolvimento e testes
+- Fluxo de autenticacao e cadastro validado em ambiente local
+
+---
+
+## Visao do produto
+
+### Landing page
+
+![Landing page](docs/screenshots/landing-page.png)
+
+### Login
+
+![Login](docs/screenshots/login-page.png)
+
+### Cadastro de empresa
+
+![Cadastro](docs/screenshots/register-page.png)
+
 ---
 
 ## Versao 2.0 — Agente com LLM Local e WhatsApp Twilio

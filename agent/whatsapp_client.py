@@ -1,12 +1,19 @@
 import logging
 import os
 
-from twilio.rest import Client
+try:
+    from twilio.rest import Client
+except ImportError:  # pragma: no cover - optional dependency for WhatsApp integration
+    Client = None
 
 logger = logging.getLogger(__name__)
 
 
 def send_whatsapp_message(to: str, body: str) -> None:
+    if Client is None:
+        logger.warning("Twilio nao instalado; mensagem do WhatsApp nao enviada.")
+        return
+
     account_sid = os.getenv("TWILIO_ACCOUNT_SID", "").strip()
     auth_token = os.getenv("TWILIO_AUTH_TOKEN", "").strip()
     from_number = os.getenv("TWILIO_WHATSAPP_FROM", "").strip()

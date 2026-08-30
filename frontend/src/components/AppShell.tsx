@@ -22,33 +22,44 @@ export default function AppShell() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="border-b bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-3 flex items-center justify-between">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.16),_transparent_28%),_linear-gradient(180deg,_#f4f7fb_0%,_#eef2ff_100%)] dark:bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.18),_transparent_24%),_linear-gradient(180deg,_#020817_0%,_#0f172a_100%)]">
+      <header className="sticky top-0 z-20 border-b border-border/60 bg-background/75 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 pr-24 sm:px-6 sm:pr-28">
           <div>
-            <h1 className="text-lg font-semibold">Smart Schedule</h1>
-            <p className="text-xs text-slate-500">
+            <div className="mb-1 flex items-center gap-2">
+              <span className="inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500 shadow-[0_0_18px_rgba(16,185,129,0.9)]" />
+              <h1 className="text-lg font-semibold tracking-tight text-foreground">Smart Schedule</h1>
+            </div>
+            <p className="text-xs text-muted-foreground">
               Admin: {user?.name} · Empresa #{user?.company_id}
             </p>
           </div>
-          <Button variant="outline" onClick={handleLogout}>
-            Sair
-          </Button>
+
+          <div className="flex items-center gap-3">
+            <Button variant="outline" onClick={handleLogout} className="rounded-full px-4 shadow-sm">
+              Sair
+            </Button>
+          </div>
         </div>
       </header>
 
-      <div className="mx-auto max-w-7xl px-4 py-6 grid gap-6 lg:grid-cols-[220px_1fr]">
-        <aside className="bg-white rounded-lg border p-3 h-fit">
+      <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[240px_1fr]">
+        <aside className="h-fit rounded-2xl border border-border/70 bg-card/80 p-3 shadow-[0_20px_45px_rgba(15,23,42,0.08)] backdrop-blur-sm dark:shadow-[0_20px_45px_rgba(2,6,23,0.38)]">
+          <div className="mb-3 px-3 pt-1">
+            <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-muted-foreground">
+              Menu
+            </p>
+          </div>
           <nav className="flex flex-col gap-2">
             {links.map((link) => (
               <NavLink
                 key={link.to}
                 to={link.to}
                 className={({ isActive }) =>
-                  `rounded-md px-3 py-2 text-sm ${
+                  `rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
                     isActive
-                      ? 'bg-slate-900 text-white'
-                      : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
+                      ? 'bg-gradient-to-r from-slate-900 to-indigo-700 text-white shadow-lg shadow-indigo-500/20 dark:from-indigo-500 dark:to-violet-500'
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                   }`
                 }
               >
@@ -58,8 +69,10 @@ export default function AppShell() {
           </nav>
         </aside>
 
-        <main>
-          <Outlet />
+        <main className="min-w-0">
+          <div className="rounded-2xl border border-border/60 bg-card/70 p-4 shadow-[0_20px_45px_rgba(15,23,42,0.05)] backdrop-blur-sm dark:shadow-[0_20px_45px_rgba(2,6,23,0.3)] sm:p-6">
+            <Outlet />
+          </div>
         </main>
       </div>
     </div>

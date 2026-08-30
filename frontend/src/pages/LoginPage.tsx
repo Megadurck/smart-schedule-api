@@ -44,43 +44,69 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <Card className="w-full max-w-md shadow-lg">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">Smart Schedule</CardTitle>
-          <CardDescription className="text-center">Acesse sua conta</CardDescription>
+    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.22),_transparent_18%),linear-gradient(180deg,_#f8fafc_0%,_#eef2ff_100%)] px-4 py-8 dark:bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.2),_transparent_16%),linear-gradient(180deg,_#020817_0%,_#0f172a_100%)]">
+      <Card className="w-full max-w-md overflow-hidden border border-slate-200/80 bg-white/80 shadow-[0_30px_80px_rgba(79,70,229,0.15)] backdrop-blur-xl dark:border-slate-700 dark:bg-slate-900/80 dark:shadow-[0_30px_80px_rgba(2,6,23,0.45)]">
+        <div className="bg-gradient-to-r from-indigo-600 via-violet-600 to-sky-500 px-6 py-6 text-white">
+          <p className="text-xs font-medium uppercase tracking-[0.28em] text-indigo-100">Smart Schedule</p>
+          <h1 className="mt-2 text-3xl font-bold tracking-tight">Bem-vindo</h1>
+        </div>
+
+        <CardHeader className="space-y-1 px-6 pt-6">
+          <CardTitle className="text-center text-2xl font-bold text-slate-900 dark:text-white">
+            Acesse sua conta
+          </CardTitle>
+          <CardDescription className="text-center text-slate-600 dark:text-slate-300">
+            Gerencie horários, clientes e profissionais em um só lugar.
+          </CardDescription>
         </CardHeader>
 
         {justRegistered && (
-          <div className="mx-6 mb-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded px-3 py-2 text-center">
+          <div className="mx-6 mb-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-center text-sm text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">
             Empresa cadastrada com sucesso! Faça o login para continuar.
           </div>
         )}
 
         <form onSubmit={handleSubmit(onSubmit)} noValidate>
-          <CardContent className="space-y-4">
-            <div className="space-y-1">
-              <Label htmlFor="company_name">Empresa</Label>
-              <Input id="company_name" placeholder="Nome da empresa" {...register('company_name')} />
+          <CardContent className="space-y-4 px-6 pb-2">
+            <div className="space-y-2">
+              <Label htmlFor="company_name" className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                Empresa
+              </Label>
+              <Input
+                id="company_name"
+                placeholder="Nome da empresa"
+                className="h-11 rounded-xl border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-950/60"
+                {...register('company_name')}
+              />
               {errors.company_name && (
                 <p className="text-sm text-red-500">{errors.company_name.message}</p>
               )}
             </div>
 
-            <div className="space-y-1">
-              <Label htmlFor="user_name">Usuário</Label>
-              <Input id="user_name" placeholder="Seu usuário" {...register('user_name')} />
+            <div className="space-y-2">
+              <Label htmlFor="user_name" className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                Usuário
+              </Label>
+              <Input
+                id="user_name"
+                placeholder="Seu usuário"
+                className="h-11 rounded-xl border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-950/60"
+                {...register('user_name')}
+              />
               {errors.user_name && (
                 <p className="text-sm text-red-500">{errors.user_name.message}</p>
               )}
             </div>
 
-            <div className="space-y-1">
-              <Label htmlFor="password">Senha</Label>
+            <div className="space-y-2">
+              <Label htmlFor="password" className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                Senha
+              </Label>
               <Input
                 id="password"
                 type="password"
                 placeholder="••••••"
+                className="h-11 rounded-xl border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-950/60"
                 {...register('password')}
               />
               {errors.password && (
@@ -89,17 +115,17 @@ export default function LoginPage() {
             </div>
 
             {serverError && (
-              <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">
+              <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300">
                 {serverError}
               </p>
             )}
           </CardContent>
 
-          <CardFooter className="flex flex-col gap-3">
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
+          <CardFooter className="flex flex-col gap-3 px-6 pb-6 pt-4">
+            <Button type="submit" className="h-11 w-full rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-lg shadow-indigo-500/20" disabled={isSubmitting}>
               {isSubmitting ? 'Entrando…' : 'Entrar'}
             </Button>
-            <Link to="/" className="text-sm text-center text-muted-foreground hover:underline">
+            <Link to="/" className="text-center text-sm text-muted-foreground hover:underline">
               ← Voltar à página inicial
             </Link>
           </CardFooter>

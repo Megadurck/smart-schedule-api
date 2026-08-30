@@ -145,54 +145,60 @@ export default function DashboardPage() {
             Filtra os insights de faturamento por intervalo de datas.
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-3 md:grid-cols-4">
-          <div className="space-y-1">
-            <label htmlFor="startDate" className="text-sm font-medium">
-              Data inicial
-            </label>
-            <div className="flex gap-2">
-              <input
-                id="startDate"
-                ref={startDateRef}
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full h-9 rounded-md border px-3 text-sm bg-white"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => openNativeDatePicker(startDateRef.current)}
-              >
-                Calendário
-              </Button>
+        <CardContent className="space-y-4">
+          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto] lg:items-end">
+            <div className="space-y-2">
+              <label htmlFor="startDate" className="text-sm font-medium">
+                Data inicial
+              </label>
+              <div className="flex gap-2">
+                <input
+                  id="startDate"
+                  ref={startDateRef}
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="h-10 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm text-foreground"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="shrink-0"
+                  onClick={() => openNativeDatePicker(startDateRef.current)}
+                >
+                  Calendário
+                </Button>
+              </div>
             </div>
-          </div>
-          <div className="space-y-1">
-            <label htmlFor="endDate" className="text-sm font-medium">
-              Data final
-            </label>
-            <div className="flex gap-2">
-              <input
-                id="endDate"
-                ref={endDateRef}
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-full h-9 rounded-md border px-3 text-sm bg-white"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => openNativeDatePicker(endDateRef.current)}
-              >
-                Calendário
-              </Button>
+
+            <div className="space-y-2">
+              <label htmlFor="endDate" className="text-sm font-medium">
+                Data final
+              </label>
+              <div className="flex gap-2">
+                <input
+                  id="endDate"
+                  ref={endDateRef}
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="h-10 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm text-foreground"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="shrink-0"
+                  onClick={() => openNativeDatePicker(endDateRef.current)}
+                >
+                  Calendário
+                </Button>
+              </div>
             </div>
-          </div>
-          <div className="md:col-span-2 flex items-end gap-2">
-            <Button onClick={applyDateFilter}>Aplicar filtro</Button>
-            <Button variant="outline" onClick={clearDateFilter}>
+
+            <Button onClick={applyDateFilter} className="h-10 whitespace-nowrap">
+              Aplicar filtro
+            </Button>
+            <Button variant="outline" onClick={clearDateFilter} className="h-10 whitespace-nowrap">
               Limpar
             </Button>
           </div>

@@ -1,5 +1,7 @@
-﻿import type { ReactNode } from 'react'
+﻿import { useEffect, useState, type ReactNode } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { MoonStar, SunMedium } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { useAuth } from '@/contexts/useAuth'
 import AppShell from '@/components/AppShell'
@@ -73,12 +75,42 @@ function AppRoutes() {
   )
 }
 
+function ThemeToggle() {
+  const [darkMode, setDarkMode] = useState(() => {
+    const saved = localStorage.getItem('smart-schedule-theme')
+    if (saved) return saved === 'dark'
+    return window.matchMedia('(prefers-color-scheme: dark)').matches
+  })
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', darkMode)
+    document.documentElement.style.colorScheme = darkMode ? 'dark' : 'light'
+    localStorage.setItem('smart-schedule-theme', darkMode ? 'dark' : 'light')
+  }, [darkMode])
+
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="icon"
+      className="fixed right-4 top-4 z-50 h-11 w-11 rounded-full border-white/20 bg-background/80 shadow-lg backdrop-blur-sm sm:right-6 dark:bg-slate-900/80"
+      onClick={() => setDarkMode((current) => !current)}
+      aria-label="Alternar tema"
+    >
+      {darkMode ? <SunMedium className="h-4 w-4" /> : <MoonStar className="h-4 w-4" />}
+    </Button>
+  )
+}
+
 export default function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <AppRoutes />
-      </AuthProvider>
-    </BrowserRouter>
+    <div className="min-h-screen bg-background text-foreground transition-colors duration-300">
+      <ThemeToggle />
+      <BrowserRouter>
+        <AuthProvider>
+          <AppRoutes />
+        </AuthProvider>
+      </BrowserRouter>
+    </div>
   )
 }
