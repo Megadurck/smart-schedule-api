@@ -235,13 +235,19 @@ export default function SchedulesPage() {
               <Label htmlFor="professional">Profissional (opcional)</Label>
               <select
                 id="professional"
-                className="w-full h-9 rounded-md border px-3 text-sm bg-white"
+                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/20"
                 value={professionalId}
                 onChange={(e) => setProfessionalId(e.target.value)}
               >
-                <option value="">Não definido</option>
+                <option value="" className="bg-popover text-popover-foreground">
+                  Não definido
+                </option>
                 {activeProfessionals.map((professional) => (
-                  <option key={professional.id} value={professional.id}>
+                  <option
+                    key={professional.id}
+                    value={professional.id}
+                    className="bg-popover text-popover-foreground"
+                  >
                     {professional.name}
                   </option>
                 ))}
@@ -334,16 +340,24 @@ export default function SchedulesPage() {
                     <td className="py-2">{item.professional?.name ?? '-'}</td>
                     <td className="py-2">
                       <select
-                        className="h-8 rounded-md border px-2 text-sm bg-white"
+                        className="h-8 rounded-md border border-input bg-background px-2 text-sm text-foreground shadow-sm focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/20"
                         value={item.status}
                         onChange={(e) =>
                           handleStatusChange(item.id, e.target.value as Schedule['status'])
                         }
                       >
-                        <option value="pending">pending</option>
-                        <option value="confirmed">confirmed</option>
-                        <option value="cancelled">cancelled</option>
-                        <option value="completed">completed</option>
+                        <option value="pending" className="bg-popover text-popover-foreground">
+                          pending
+                        </option>
+                        <option value="confirmed" className="bg-popover text-popover-foreground">
+                          confirmed
+                        </option>
+                        <option value="cancelled" className="bg-popover text-popover-foreground">
+                          cancelled
+                        </option>
+                        <option value="completed" className="bg-popover text-popover-foreground">
+                          completed
+                        </option>
                       </select>
                     </td>
                     <td className="py-2">
