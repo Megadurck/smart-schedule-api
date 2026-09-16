@@ -11,6 +11,7 @@ from app.database.session import (
     ensure_company_admin_columns,
     ensure_schedule_constraints,
 )
+from agent.whatsapp_client import start_neonize_listener, stop_neonize_listener
 from app.models.company import Company
 from app.models.customer import Customer
 from app.models.professional import Professional
@@ -24,8 +25,14 @@ async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
     ensure_company_admin_columns()
     ensure_schedule_constraints()
+
+    if os.getenv("WHATSAPP_PROVIDER", "neonize").strip().lower() == "neonize":
+        start_neonize_listener()
+
     yield
-    # Shutdown: (nada por enquanto)
+
+    if os.getenv("WHATSAPP_PROVIDER", "neonize").strip().lower() == "neonize":
+        stop_neonize_listener()
 
 app = FastAPI(title="Smart Schedule API", lifespan=lifespan)
 

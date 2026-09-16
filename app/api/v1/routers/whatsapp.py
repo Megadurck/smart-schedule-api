@@ -1,5 +1,5 @@
 """
-Webhook para integração com o WhatsApp via Twilio.
+Webhook para integração com o WhatsApp via Neonize.
 """
 
 from fastapi import APIRouter, Request, Response
@@ -19,7 +19,7 @@ def webhook_health_check():
 
 @router.post("/webhook")
 async def receive_webhook(request: Request):
-    """Recebe mensagens do Twilio, processa com o agent e responde."""
+    """Recebe mensagens do Neonize, processa com o agent e responde."""
     form = await request.form()
     from_number = (form.get("From") or "").strip()
     body = (form.get("Body") or "").strip()

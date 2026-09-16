@@ -15,7 +15,7 @@
   <img src="https://img.shields.io/badge/v2.0-LLM--Agent-blue?style=for-the-badge" />
 </p>
 
-> Plataforma completa de agendamentos para empresas de servicos — API REST robusta + painel web moderno + agente conversacional com LLM local (Ollama), integrado ao WhatsApp via Twilio Sandbox.
+> Plataforma completa de agendamentos para empresas de servicos — API REST robusta + painel web moderno + agente conversacional com LLM local (Ollama), integrado ao WhatsApp via Neonize.
 
 ## Implementacoes recentes
 
@@ -28,7 +28,7 @@ A plataforma foi evoluida para uma experiencia mais premium e operacional, com f
 - Ajustes de layout para evitar sobreposicao de botoes e melhorar espaco em telas diversas
 - Melhoras na navegacao do app shell, mantendo um visual limpo e profissional
 - Integracao com API de agendamentos, clientes, profissionais e horarios em contexto multi-tenant
-- Suporte a assistente local com LLM e integracao WhatsApp/Twilio
+- Suporte a assistente local com LLM e integracao WhatsApp/Neonize
 
 ### Status atual
 - Backend em FastAPI funcionando em ambiente local
@@ -54,9 +54,9 @@ A plataforma foi evoluida para uma experiencia mais premium e operacional, com f
 
 ---
 
-## Versao 2.0 — Agente com LLM Local e WhatsApp Twilio
+## Versao 2.0 — Agente com LLM Local e WhatsApp Neonize
 
-**Hoje**: o sistema já inclui um assistente conversacional em português que interpreta mensagens, consulta a API de agendamentos e cria/cancela agendamentos com contexto do tenant da empresa. A integração com WhatsApp está funcionando via **Twilio Sandbox**, com webhook e envio de mensagens utilizando o número do sandbox configurado.
+**Hoje**: o sistema já inclui um assistente conversacional em português que interpreta mensagens, consulta a API de agendamentos e cria/cancela agendamentos com contexto do tenant da empresa. A integração com WhatsApp está funcionando via **Neonize**, com pareamento por QR code no terminal e envio/recebimento direto pelo dispositivo autenticado.
 
 ### O que mudou
 
@@ -88,7 +88,7 @@ A partir da **v2.0**, um **agente conversacional com LLM local** permite que usu
 | **Agenda** | Criacao, listagem e atualizacao de status de agendamentos |
 | **Dashboard** | Indicadores operacionais: receita total, ticket medio, agendamentos por profissional e proximos compromissos |
 | **Agente LLM** | Assistente conversacional local para listar slots, criar e cancelar agendamentos via linguagem natural |
-| **WhatsApp / Twilio** | Integração com Twilio Sandbox para receber e responder mensagens de WhatsApp |
+| **WhatsApp / Neonize** | Integração com Neonize para receber e responder mensagens de WhatsApp |
 
 ---
 
@@ -109,10 +109,10 @@ A partir da **v2.0**, um **agente conversacional com LLM local** permite que usu
 - **Prompt engineering** — extração de intenção e parâmetros em JSON estruturado
 - **Interpretação de linguagem natural** — suporta variações linguísticas e contexto
 
-### WhatsApp / Twilio
-- **[Twilio](https://www.twilio.com/)** — integração de mensagens WhatsApp via sandbox
-- **Webhook** — recebe mensagens do WhatsApp e encaminha para o agente
-- **Envio outbound** — respostas e confirmações enviadas via Twilio
+### WhatsApp / Neonize
+- **[Neonize](https://pypi.org/project/neonize/)** — integração WhatsApp por pareamento local com QR code
+- **Listener em runtime** — recebe mensagens do WhatsApp e encaminha para o agente
+- **Envio outbound** — respostas e confirmações enviadas pelo mesmo dispositivo autenticado
 
 ### Frontend
 - **[React 19](https://react.dev/)** + **[TypeScript](https://www.typescriptlang.org/)** — UI declarativa com tipagem forte
@@ -394,8 +394,8 @@ Pressione `Ctrl+C` no terminal para encerrar.
 | **Agent** | `agent/agent.py` | Orquestração de intent parsing, despacho de ações e tratamento de erros |
 | **Tools** | `agent/tools.py` | Interface com o `ScheduleApiClient` para listar slots e criar agendamentos |
 | **API Client** | `agent/api_client.py` | Cliente HTTP (login/refresh JWT) que consome a Smart Schedule API — o agent não acessa mais o banco diretamente |
-| **WhatsApp Client** | `agent/whatsapp_client.py` | Envio de mensagens de resposta via Twilio WhatsApp Sandbox |
-| **Config** | `agent/config.py` | Configuração: endpoint Ollama, modelo, temperatura, provider (ollama/offline), credenciais da API e do Twilio |
+| **WhatsApp Client** | `agent/whatsapp_client.py` | Envio e recebimento de mensagens via Neonize |
+| **Config** | `agent/config.py` | Configuração: endpoint Ollama, modelo, temperatura, provider (ollama/offline), credenciais da API e provider Neonize |
 | **Prompts** | `agent/prompts.py` | Prompts estruturados em português com exemplos e formatos esperados |
 
 ### Fluxo de decisão
@@ -403,7 +403,7 @@ Pressione `Ctrl+C` no terminal para encerrar.
 1. **Parsing de Intent**: O LLM analisa a mensagem e retorna um JSON estruturado com `action`, parâmetros e `confidence`
 2. **Validação**: Agente verifica se todos os parâmetros necessários foram extraídos
 3. **Execução**: Tools chamam a Smart Schedule API via HTTP (`agent/api_client.py`), autenticando com um usuário/empresa dedicado do agent
-4. **Resposta**: Resultado formatado é retornado ao usuário (ou enviado de volta via WhatsApp pelo webhook do Twilio)
+4. **Resposta**: Resultado formatado é retornado ao usuário (ou enviado de volta via WhatsApp pelo Neonize)
 5. **Fallback**: Se LLM falhar (timeout, erro), agent tenta padrão simples (pattern matching)
 
 ### Configuração de provedor
@@ -555,16 +555,16 @@ Os arquivos estaticos serao gerados em `frontend/dist/` e podem ser servidos por
 
 ---
 
-## Status atual — WhatsApp + Twilio Sandbox
+## Status atual — WhatsApp + Neonize
 
-**Status: validado em ambiente local e pronto para refinamento do agente.** O fluxo de WhatsApp está integrado com **Twilio Sandbox**, e o agente já conversa com a API e cria/agendamentos corretamente.
+**Status: validado em ambiente local e pronto para refinamento do agente.** O fluxo de WhatsApp está integrado com **Neonize**, e o agente já conversa com a API e executa os fluxos principais de agenda.
 
 ### O que ja foi validado
 
 - ✅ Agent deixa de acessar o banco/services diretamente e consome a API via HTTP (`agent/api_client.py`), com login/refresh de JWT automatico
 - ✅ Endpoint `GET /api/v1/schedule/available-slots` funcionando para listar slots livres
-- ✅ Webhook do WhatsApp implementado em `app/api/v1/routers/whatsapp.py` com processamento de mensagens do Twilio
-- ✅ Envio de respostas via `agent/whatsapp_client.py` usando o número configurado no Twilio Sandbox
+- ✅ Integração do WhatsApp via `agent/whatsapp_client.py` com sessão Neonize e pareamento por QR no terminal
+- ✅ Envio de respostas no mesmo chat/JID de origem (incluindo IDs `@lid`), evitando erros de token de privacidade
 - ✅ Fluxo de listagem de horários e criação de agendamento validado em testes e no uso prático
 - ✅ Multi-tenant funcionando com empresa/tenant isolado por `company_id`
 - ✅ Agente com respostas mais naturais e sem recorrer a erro bruto quando o horário está fora do funcionamento
@@ -576,17 +576,16 @@ Os arquivos estaticos serao gerados em `frontend/dist/` e podem ser servidos por
 - ⏳ Melhorar mensagens do WhatsApp para manter o formato mais humano e consistente
 - ⏳ Ajustar detalhes finos de UX no painel para empresa/admin
 
-### Variaveis de ambiente do WhatsApp/Twilio
+### Variaveis de ambiente do WhatsApp/Neonize
 
 No `.env`, o setup atual usa:
 
 ```env
-TWILIO_ACCOUNT_SID=...
-TWILIO_AUTH_TOKEN=...
-TWILIO_WHATSAPP_FROM=whatsapp:+14155238886
+WHATSAPP_PROVIDER=neonize
+NEONIZE_CLIENT_NAME=smart-schedule-agent
 ```
 
-E o fluxo de webhook exige expor a API publicamente com `ngrok` para registrar a URL do webhook no painel do Twilio.
+Na primeira execução, o QR code é exibido no terminal para pareamento. Após autenticar, a sessão é reutilizada nas próximas execuções.
 
 ---
 

@@ -3,6 +3,7 @@ Main agent logic - LLM-driven scheduling assistant
 """
 import json
 import logging
+import unicodedata
 from typing import Optional
 
 from fastapi import HTTPException
@@ -15,6 +16,13 @@ if AGENT_PROVIDER == "ollama":
     from agent.prompts import SYSTEM_PROMPT, EXTRACTION_PROMPT_TEMPLATE
 
 logger = logging.getLogger(__name__)
+
+
+CHAT_SYSTEM_PROMPT = (
+    "Você é um assistente virtual amigável em português brasileiro. "
+    "Converse de forma natural, objetiva e educada. "
+    "Não invente acesso a banco, agenda ou sistemas externos."
+)
 
 
 def parse_intent_llm(message: str) -> dict:
@@ -35,6 +43,34 @@ def parse_intent_llm(message: str) -> dict:
         return {"action": "help", "confidence": 0.0}
 
 
+def handle_chat_message(message: str) -> str:
+    """Temporary chat-only mode (no API/tool calls)."""
+    clean_message = (message or "").strip()
+    if not clean_message:
+        return "Pode me enviar uma mensagem?"
+
+    # Try Ollama first for natural chat. If unavailable, fallback to offline chat.
+    try:
+        from agent.llm import OllamaClient
+
+        with OllamaClient() as llm:
+            return llm.generate(clean_message, system=CHAT_SYSTEM_PROMPT)
+    except Exception as exc:  # pragma: no cover
+        logger.warning(f"Chat via Ollama indisponivel, usando fallback offline: {exc}")
+
+    text = _compact_text_for_matching(clean_message)
+    if any(word in text for word in ["oi", "ola", "olá", "bom dia", "boa tarde", "boa noite"]):
+        return "Oi! Estou online e pronto para conversar com você."
+
+    if "quem e voce" in text or "quem é voce" in text:
+        return "Sou seu assistente virtual no WhatsApp. Posso conversar normalmente com você."
+
+    return (
+        "Entendi. No momento estou em modo conversa, sem consultar a API de agendamentos. "
+        "Se quiser, podemos falar sobre qualquer assunto e depois eu volto para o modo agenda."
+    )
+
+
 def parse_intent(message: str) -> dict:
     """Route para diferentes estratégias de parsing"""
     if AGENT_PROVIDER == "ollama":
@@ -47,9 +83,14 @@ def parse_intent(message: str) -> dict:
         return parse_intent_simple(message)
 
 
+def _compact_text_for_matching(text: str) -> str:
+    normalized = unicodedata.normalize("NFKD", text.lower())
+    return "".join(ch for ch in normalized if not unicodedata.combining(ch))
+
+
 def parse_intent_simple(message: str) -> dict:
     """Fallback simples baseado em patterns (original)"""
-    text = message.strip().lower()
+    text = _compact_text_for_matching(message.strip())
 
     if any(word in text for word in ["cancelar", "cancelamento", "excluir", "remover"]):
         return {

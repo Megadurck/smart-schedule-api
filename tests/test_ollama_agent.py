@@ -94,6 +94,74 @@ def test_handle_message_list_slots_grouped_by_date():
     assert "Slots disponíveis" in response
 
 
+def test_send_whatsapp_message_uses_neonize_when_configured(monkeypatch):
+    captured = {}
+
+    class FakeClient:
+        connected = False
+        is_connected = True
+
+        def send_message(self, to, message, link_preview=False, ghost_mentions=None, mentions_are_lids=False, add_msg_secret=False):
+            captured["to"] = to
+            captured["message"] = message
+            captured["link_preview"] = link_preview
+            return {"status": "ok"}
+
+    def fake_connect(self):
+        captured["connect_called"] = True
+        self.connected = True
+
+    monkeypatch.setenv("WHATSAPP_PROVIDER", "neonize")
+    monkeypatch.setattr("agent.whatsapp_client.get_neonize_client", lambda: FakeClient())
+    monkeypatch.setattr("agent.whatsapp_client._normalize_whatsapp_target", lambda value: "5511999998888")
+    monkeypatch.setattr("agent.whatsapp_client._is_neonize_connected", lambda client: True)
+
+    from agent import whatsapp_client
+
+    whatsapp_client.send_whatsapp_message("+5511999998888", "Olá do Smart Schedule")
+
+    assert getattr(captured["to"], "User", None) == "5511999998888"
+    assert captured["message"] == "Olá do Smart Schedule"
+    assert captured["link_preview"] is False
+    assert "connect_called" not in captured
+
+
+def test_neonize_connected_state_uses_property_not_method(monkeypatch):
+    class FakeClient:
+        connected = False
+        is_connected = True
+
+    from agent import whatsapp_client
+
+    assert whatsapp_client._is_neonize_connected(FakeClient()) is True
+
+
+def test_get_neonize_client_registers_message_event(monkeypatch):
+    monkeypatch.setenv("WHATSAPP_PROVIDER", "neonize")
+    monkeypatch.setattr("agent.whatsapp_client._NEONIZE_CLIENT", None)
+
+    from agent import whatsapp_client
+
+    client = whatsapp_client.get_neonize_client()
+
+    assert client is not None
+    assert client.event.list_func
+
+
+def test_render_qr_from_neonize_url_bytes(monkeypatch):
+    from io import StringIO
+
+    from agent import whatsapp_client
+
+    stream = StringIO()
+    with patch("sys.stdout", stream):
+        rendered = whatsapp_client._render_qr_to_terminal(b"https://wa.me/settings/linked_devices#abc")
+
+    assert rendered == "qr-rendered"
+    assert "https://wa.me/settings/linked_devices#abc" not in stream.getvalue()
+    assert any(symbol in stream.getvalue() for symbol in ("█", "##", "██", "  "))
+
+
 # Test cases
 test_messages = [
     "Quais são os horários disponíveis para 03/03/2026?",

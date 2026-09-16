@@ -13,6 +13,7 @@ from agent.config import (
     AGENT_API_BASE_URL,
     AGENT_API_USER,
     AGENT_API_PASSWORD,
+    AGENT_COMPANY_NAME,
 )
 
 logger = logging.getLogger(__name__)
@@ -24,11 +25,11 @@ class ScheduleApiClient:
     def __init__(
         self,
         base_url: str = AGENT_API_BASE_URL,
-        company_name: str | None = None,
+        company_name: str | None = AGENT_COMPANY_NAME,
         user_name: str = AGENT_API_USER,
         password: str = AGENT_API_PASSWORD,
     ):
-        self.company_name = company_name
+        self.company_name = company_name or AGENT_COMPANY_NAME
         self.user_name = user_name
         self.password = password
         self.client = httpx.Client(timeout=30.0, base_url=base_url.rstrip("/"))
