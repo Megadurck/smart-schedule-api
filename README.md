@@ -23,8 +23,10 @@ A plataforma foi evoluida para uma experiencia mais premium e operacional, com f
 
 ### O que foi entregue
 - Landing page moderna com proposta de valor, recursos e CTA claros
-- Fluxo de login e cadastro com identidade visual consistente e dark mode
+- Identidade visual carvão/âmbar no dark mode e marfim/bronze no modo claro
+- Fluxo de login e cadastro com identidade visual consistente e alternância de tema
 - Dashboard com cards de indicadores e filtros de periodo por datas
+- Dashboard com leitura de faturamento, ticket medio, status e receita por profissional
 - Ajustes de layout para evitar sobreposicao de botoes e melhorar espaco em telas diversas
 - Melhoras na navegacao do app shell, mantendo um visual limpo e profissional
 - Integracao com API de agendamentos, clientes, profissionais e horarios em contexto multi-tenant
@@ -40,6 +42,8 @@ A plataforma foi evoluida para uma experiencia mais premium e operacional, com f
 
 ## Visao do produto
 
+As capturas abaixo foram atualizadas após a revisão visual do frontend. O dashboard é acessado após o login e concentra os indicadores operacionais e financeiros da empresa.
+
 ### Landing page
 
 ![Landing page](docs/screenshots/landing-page.png)
@@ -51,6 +55,22 @@ A plataforma foi evoluida para uma experiencia mais premium e operacional, com f
 ### Cadastro de empresa
 
 ![Cadastro](docs/screenshots/register-page.png)
+
+### Dashboard
+
+![Dashboard com dados de demonstracao](docs/screenshots/dashboard-page.png)
+
+O dashboard apresenta faturamento, ticket medio, quantidade de agendamentos, profissionais, clientes, distribuição por status e receita por profissional.
+
+Para reproduzir a captura localmente, use a empresa de demonstração:
+
+```text
+Empresa: Studio Aurora Showcase
+Usuario: showcase_admin
+Senha: showcase123
+```
+
+Os dados da captura são fictícios e existem apenas no banco local de demonstração.
 
 ---
 

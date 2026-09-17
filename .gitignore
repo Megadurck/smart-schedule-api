@@ -11,6 +11,13 @@ __pycache__/
 
 # banco de dados local (gerado em desenvolvimento/testes)
 *.db
+smart-schedule-agent
+
+# artefatos locais de demo e servidores
+_tmp_demo_seed.py
+.tmp_seed_*.py
+uvicorn-clean.stdout.log
+uvicorn-clean.stderr.log
 
 # arquivos de sistema
 .DS_Store
