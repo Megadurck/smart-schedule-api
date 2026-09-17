@@ -243,7 +243,7 @@ export default function DashboardPage() {
             ))}
           </div>
 
-          <div className="rounded-2xl border bg-gradient-to-br from-slate-50 via-white to-indigo-50 p-4 dark:from-slate-900 dark:via-slate-950 dark:to-indigo-950">
+          <div className="rounded-2xl border bg-linear-to-br from-slate-50 via-white to-indigo-50 p-4 dark:from-slate-900 dark:via-slate-950 dark:to-indigo-950">
             <div className="mb-3 flex items-center justify-between gap-4">
               <div>
                 <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Faturamento</p>

@@ -51,18 +51,18 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,rgba(99,102,241,0.22),transparent_18%),linear-gradient(180deg,#f8fafc_0%,#eef2ff_100%)] px-4 py-8 dark:bg-[radial-gradient(circle_at_top,rgba(99,102,241,0.2),transparent_16%),linear-gradient(180deg,#020817_0%,#0f172a_100%)]">
-      <Card className="w-full max-w-md overflow-hidden border border-slate-200/80 bg-white/80 shadow-[0_30px_80px_rgba(79,70,229,0.15)] backdrop-blur-xl dark:border-slate-700 dark:bg-slate-900/80 dark:shadow-[0_30px_80px_rgba(2,6,23,0.45)]">
-        <div className="bg-linear-to-r from-indigo-600 via-violet-600 to-sky-500 px-6 py-6 text-white">
-          <p className="text-xs font-medium uppercase tracking-[0.28em] text-indigo-100">Smart Schedule</p>
+    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(60%_34%_at_50%_-5%,rgba(181,126,67,0.2),transparent_68%),linear-gradient(180deg,#f8f2e7_0%,#efe5d6_100%)] px-4 py-8 dark:bg-[radial-gradient(56%_30%_at_50%_-4%,rgba(181,126,67,0.24),transparent_70%),linear-gradient(180deg,#090b10_0%,#11141b_55%,#151922_100%)]">
+      <Card className="w-full max-w-md overflow-hidden border border-zinc-300/70 bg-white/80 shadow-[0_30px_80px_rgba(89,64,31,0.18)] backdrop-blur-xl dark:border-zinc-700 dark:bg-zinc-900/80 dark:shadow-[0_30px_80px_rgba(4,6,12,0.5)]">
+        <div className="bg-linear-to-r from-zinc-900 via-zinc-800 to-amber-700 px-6 py-6 text-amber-50 dark:from-zinc-700 dark:to-amber-600">
+          <p className="text-xs font-medium uppercase tracking-[0.28em] text-amber-100">Smart Schedule</p>
           <h1 className="mt-2 text-3xl font-bold tracking-tight">Comece agora</h1>
         </div>
 
         <CardHeader className="space-y-1 px-6 pt-6">
-          <CardTitle className="text-center text-2xl font-bold text-slate-900 dark:text-white">
+          <CardTitle className="text-center text-2xl font-bold text-zinc-900 dark:text-zinc-100">
             Cadastre sua empresa
           </CardTitle>
-          <CardDescription className="text-center text-slate-600 dark:text-slate-300">
+          <CardDescription className="text-center text-zinc-600 dark:text-zinc-300">
             Crie o primeiro acesso e organize a operação do seu negócio.
           </CardDescription>
         </CardHeader>
@@ -70,13 +70,13 @@ export default function RegisterPage() {
         <form onSubmit={handleSubmit(onSubmit)} noValidate>
           <CardContent className="space-y-4 px-6 pb-2">
             <div className="space-y-2">
-              <Label htmlFor="company_name" className="text-sm font-medium text-slate-700 dark:text-slate-200">
+              <Label htmlFor="company_name" className="text-sm font-medium text-zinc-700 dark:text-zinc-200">
                 Nome da empresa
               </Label>
               <Input
                 id="company_name"
                 placeholder="Ex.: Barbearia do João"
-                className="h-11 rounded-xl border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-950/60"
+                className="h-11 rounded-xl border-zinc-200 bg-stone-50 dark:border-zinc-700 dark:bg-zinc-950/60"
                 {...register('company_name')}
               />
               {errors.company_name && (
@@ -85,13 +85,13 @@ export default function RegisterPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="user_name" className="text-sm font-medium text-slate-700 dark:text-slate-200">
+              <Label htmlFor="user_name" className="text-sm font-medium text-zinc-700 dark:text-zinc-200">
                 Usuário (administrador)
               </Label>
               <Input
                 id="user_name"
                 placeholder="admin"
-                className="h-11 rounded-xl border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-950/60"
+                className="h-11 rounded-xl border-zinc-200 bg-stone-50 dark:border-zinc-700 dark:bg-zinc-950/60"
                 {...register('user_name')}
               />
               {errors.user_name && (
@@ -100,14 +100,14 @@ export default function RegisterPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-sm font-medium text-slate-700 dark:text-slate-200">
+              <Label htmlFor="password" className="text-sm font-medium text-zinc-700 dark:text-zinc-200">
                 Senha
               </Label>
               <Input
                 id="password"
                 type="password"
                 placeholder="••••••"
-                className="h-11 rounded-xl border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-950/60"
+                className="h-11 rounded-xl border-zinc-200 bg-stone-50 dark:border-zinc-700 dark:bg-zinc-950/60"
                 {...register('password')}
               />
               {errors.password && (
@@ -116,14 +116,14 @@ export default function RegisterPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="confirm_password" className="text-sm font-medium text-slate-700 dark:text-slate-200">
+              <Label htmlFor="confirm_password" className="text-sm font-medium text-zinc-700 dark:text-zinc-200">
                 Confirmar senha
               </Label>
               <Input
                 id="confirm_password"
                 type="password"
                 placeholder="••••••"
-                className="h-11 rounded-xl border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-950/60"
+                className="h-11 rounded-xl border-zinc-200 bg-stone-50 dark:border-zinc-700 dark:bg-zinc-950/60"
                 {...register('confirm_password')}
               />
               {errors.confirm_password && (
@@ -139,12 +139,12 @@ export default function RegisterPage() {
           </CardContent>
 
           <CardFooter className="flex flex-col gap-3 px-6 pb-6 pt-4">
-            <Button type="submit" className="h-11 w-full rounded-xl bg-linear-to-r from-indigo-600 to-violet-600 text-white shadow-lg shadow-indigo-500/20" disabled={isSubmitting}>
+            <Button type="submit" className="h-11 w-full rounded-xl bg-linear-to-r from-zinc-900 to-amber-700 text-amber-50 shadow-lg shadow-amber-700/20 dark:from-zinc-700 dark:to-amber-600" disabled={isSubmitting}>
               {isSubmitting ? 'Criando conta…' : 'Criar conta'}
             </Button>
             <p className="text-center text-sm text-muted-foreground">
               Já tem conta?{' '}
-              <Link to="/login" className="font-medium text-indigo-600 hover:underline dark:text-indigo-300">
+              <Link to="/login" className="font-medium text-amber-700 hover:underline dark:text-amber-300">
                 Fazer login
               </Link>
             </p>
