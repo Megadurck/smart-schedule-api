@@ -1,5 +1,5 @@
 # ambiente virtual
-venv/
+.venv/
 .env
 
 # cache python
