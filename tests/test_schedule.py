@@ -33,14 +33,15 @@ FALLBACK_START_DATE = _next_weekday(0)  # Monday
 
 
 def get_auth_headers(company_name: str = "empresa_schedule"):
-    auth_counter[0] += 1
     payload = {
         "company_name": company_name,
-        "user_name": f"auth_schedule_{auth_counter[0]}",
+        "user_name": f"auth_schedule_{company_name}",
         "password": "senha123",
     }
     response = client.post("/api/v1/auth/register", json=payload)
-    assert response.status_code == 201
+    if response.status_code == 409:
+        response = client.post("/api/v1/auth/login", json=payload)
+    assert response.status_code in {200, 201}
     access_token = response.json()["access_token"]
     return {"Authorization": f"Bearer {access_token}"}
 

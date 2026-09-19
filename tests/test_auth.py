@@ -29,16 +29,35 @@ def test_register_and_login_flow():
     assert "refresh_token" in login_data
 
 
-def test_register_without_company_name_uses_default_company():
+def test_register_without_company_name_is_rejected():
     payload = {
         "user_name": "usuario_sem_empresa",
         "password": "senha123",
     }
 
     response = client.post("/api/v1/auth/register", json=payload)
-    assert response.status_code == 201
-    assert "access_token" in response.json()
-    assert "refresh_token" in response.json()
+    assert response.status_code == 422
+
+
+def test_register_existing_company_requires_invitation():
+    company_payload = {
+        "company_name": "empresa_existente",
+        "user_name": "primeiro_usuario",
+        "password": "senha123",
+    }
+    first = client.post("/api/v1/auth/register", json=company_payload)
+    assert first.status_code == 201
+
+    response = client.post(
+        "/api/v1/auth/register",
+        json={
+            "company_name": "empresa_existente",
+            "user_name": "novo_usuario",
+            "password": "senha123",
+        },
+    )
+    assert response.status_code == 409
+    assert "convite" in response.json()["detail"]
 
 
 def test_register_existing_credentials_returns_conflict():

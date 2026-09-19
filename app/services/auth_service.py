@@ -11,23 +11,26 @@ from app.core.security import (
 from app.repositories import company_repository, user_repository
 
 
-def _resolve_company_name(db: Session, company_name: str | None) -> str:
-    resolved = (company_name or "").strip()
-    if resolved:
-        return resolved
-
-    first_company = db.query(company_repository.Company).order_by(company_repository.Company.id.asc()).first()
-    return first_company.name if first_company else "default"
-
-
 def register_user_credentials(
     db: Session,
     company_name: str | None,
     user_name: str,
     password: str,
 ):
-    company_name = _resolve_company_name(db, company_name)
-    company = company_repository.find_or_create_company(db, company_name)
+    company_name = (company_name or "").strip()
+    if not company_name:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Nome da empresa e obrigatorio para criar uma nova empresa.",
+        )
+
+    if company_repository.get_company_by_name(db, company_name):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Empresa ja cadastrada. Associacao de usuarios exige convite.",
+        )
+
+    company = company_repository.create_company(db, company_name)
     user = user_repository.get_user_by_name(db, user_name, company.id)
 
     if user and user.password_hash:
@@ -47,7 +50,13 @@ def register_user_credentials(
 
 
 def login(db: Session, company_name: str | None, user_name: str, password: str):
-    company_name = _resolve_company_name(db, company_name)
+    company_name = (company_name or "").strip()
+    if not company_name:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Credenciais invalidas.",
+        )
+
     company = company_repository.get_company_by_name(db, company_name)
     if not company:
         raise HTTPException(

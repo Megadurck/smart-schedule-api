@@ -7,6 +7,8 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 os.environ.setdefault("SECRET_KEY", "test-secret-key")
+os.environ.setdefault("AGENT_API_PASSWORD", "test-agent-password")
+os.environ.setdefault("WHATSAPP_WEBHOOK_SECRET", "test-webhook-secret")
 
 # Engine in-memory compartilhado por todas as conexões (incluindo threads do ASGI)
 _test_engine = create_engine(
