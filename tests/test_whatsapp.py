@@ -10,7 +10,7 @@ WEBHOOK_SECRET = "test-webhook-secret"
 
 
 def test_webhook_authenticated_message_is_processed():
-    with patch("app.api.v1.routers.whatsapp.handle_message", return_value="Resposta"), patch(
+    with patch("app.api.v1.routers.whatsapp.handle_message", return_value="Resposta") as handle_message, patch(
         "app.api.v1.routers.whatsapp.send_whatsapp_message"
     ) as send_message:
         response = client.post(
@@ -20,7 +20,8 @@ def test_webhook_authenticated_message_is_processed():
         )
 
     assert response.status_code == 200
-    send_message.assert_called_once_with("+5511999998888", "Resposta")
+    handle_message.assert_called_once_with("Oi", "5511999998888")
+    send_message.assert_called_once_with("5511999998888", "Resposta")
 
 
 def test_webhook_without_authentication_is_rejected():

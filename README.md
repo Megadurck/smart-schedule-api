@@ -275,6 +275,23 @@ A API estara disponivel em:
 
 > **Banco de dados:** O SQLite e criado automaticamente em `smart_schedule.db` na primeira execucao. Para resetar: `python reset_db.py`.
 
+### Executar com Docker Compose
+
+O contexto e a imagem Docker excluem arquivos locais, bancos, ambientes virtuais, o artefato de sessão Neonize padrão (`smart-schedule-agent`), testes e o frontend. Se `NEONIZE_SESSION_PATH` apontar para outro local dentro do projeto, adicione esse caminho ao `.dockerignore`. A imagem copia somente `app/`, `agent/` e `requirements.txt`; segredos são fornecidos em runtime pelo arquivo `.env`, nunca pelo build.
+
+```bash
+cp .env.example .env
+python -c "import secrets; print(secrets.token_hex(32))"
+```
+
+Use o valor gerado em `SECRET_KEY` e defina também uma senha exclusiva em `AGENT_API_PASSWORD`. Se utilizar o webhook HTTP, configure `WHATSAPP_WEBHOOK_SECRET` com outro segredo aleatório. Depois, inicie a API:
+
+```bash
+docker compose up --build
+```
+
+Não publique `.env` nem passe segredos via `ARG` ou `ENV` no Dockerfile. Em produção, injete-os pelo gerenciador de segredos da plataforma. Se uma imagem construída antes desta proteção foi enviada a um registry ou compartilhada, considere expostos os segredos que estavam no contexto: revogue e gere novos valores, reconstrua e publique uma imagem limpa e remova as versões antigas do registry quando possível. Apagar uma tag antiga não garante, por si só, que camadas já baixadas deixaram de existir.
+
 ---
 
 ### 4. Frontend

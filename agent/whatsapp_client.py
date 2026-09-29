@@ -187,6 +187,10 @@ def _extract_reply_target_jid(message):
     return None
 
 
+def _is_group_jid(jid) -> bool:
+    return jid is not None and str(getattr(jid, "Server", "")).endswith("g.us")
+
+
 def get_neonize_client():
     global _NEONIZE_CLIENT
 
@@ -208,8 +212,12 @@ def get_neonize_client():
                 if not text:
                     return
 
+                if _is_group_jid(target_jid):
+                    logger.warning("Mensagem de agenda ignorada em conversa de grupo.")
+                    return
+
                 normalized_sender = _normalize_whatsapp_target(sender)
-                if target_jid is None and not normalized_sender:
+                if not normalized_sender:
                     return
 
                 if target_jid is not None:
@@ -219,7 +227,7 @@ def get_neonize_client():
                 else:
                     logger.info("Mensagem recebida via Neonize de %s", normalized_sender)
 
-                reply = handle_message(text)
+                reply = handle_message(text, sender_phone=normalized_sender)
                 send_whatsapp_message(target_jid if target_jid is not None else normalized_sender, reply)
 
             def _on_qr(_client, qr_bytes):

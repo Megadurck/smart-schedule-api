@@ -4,11 +4,13 @@ services:
   api:
     build: .
     container_name: smart-schedule-api
+    env_file:
+      - .env
     ports:
       - '8000:8000'
     environment:
       DATABASE_URL: sqlite:///./smart_schedule.db
-      SECRET_KEY: change-me-to-a-strong-random-key
+      SECRET_KEY: ${SECRET_KEY:?Configure uma SECRET_KEY aleatoria no arquivo .env}
       CORS_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
       AGENT_PROVIDER: offline
     volumes:

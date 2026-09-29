@@ -3,11 +3,14 @@ Main agent logic - LLM-driven scheduling assistant
 """
 import json
 import logging
+import threading
+import time as time_module
 import unicodedata
 from typing import Optional
 
 from fastapi import HTTPException
 
+from app.core.phone import normalize_whatsapp_phone
 from agent.config import AGENT_PROVIDER
 from agent import tools
 
@@ -16,6 +19,9 @@ if AGENT_PROVIDER == "ollama":
     from agent.prompts import SYSTEM_PROMPT, EXTRACTION_PROMPT_TEMPLATE
 
 logger = logging.getLogger(__name__)
+_PENDING_CANCELLATIONS: dict[str, tuple[int, float]] = {}
+_PENDING_CANCELLATIONS_LOCK = threading.Lock()
+_CANCELLATION_CONFIRMATION_TTL_SECONDS = 300
 
 
 CHAT_SYSTEM_PROMPT = (
@@ -75,7 +81,12 @@ def parse_intent(message: str) -> dict:
     """Route para diferentes estratégias de parsing"""
     if AGENT_PROVIDER == "ollama":
         parsed = parse_intent_llm(message)
-        if parsed.get("action") not in {"list_slots", "create_schedule", "delete_schedule"}:
+        if parsed.get("action") not in {
+            "list_slots",
+            "list_my_schedules",
+            "create_schedule",
+            "delete_schedule",
+        }:
             return parse_intent_simple(message)
         return parsed
     else:
@@ -91,6 +102,12 @@ def _compact_text_for_matching(text: str) -> str:
 def parse_intent_simple(message: str) -> dict:
     """Fallback simples baseado em patterns (original)"""
     text = _compact_text_for_matching(message.strip())
+
+    if any(
+        phrase in text
+        for phrase in ("meus agendamentos", "listar agendamentos", "minhas consultas")
+    ):
+        return {"action": "list_my_schedules"}
 
     if any(word in text for word in ["cancelar", "cancelamento", "excluir", "remover"]):
         return {
@@ -117,8 +134,71 @@ def parse_intent_simple(message: str) -> dict:
     return {"action": "help"}
 
 
-def handle_message(message: str) -> str:
+def _is_cancel_confirmation(message: str) -> bool:
+    normalized = _compact_text_for_matching(message).strip(" .,!?")
+    return normalized in {"confirmar cancelamento", "confirmo cancelamento"}
+
+
+def _clear_expired_cancellations(now: float) -> None:
+    expired = [
+        phone
+        for phone, (_, expires_at) in _PENDING_CANCELLATIONS.items()
+        if expires_at <= now
+    ]
+    for phone in expired:
+        _PENDING_CANCELLATIONS.pop(phone, None)
+
+
+def _consume_pending_cancellation(whatsapp_phone: str) -> int | None:
+    now = time_module.time()
+    with _PENDING_CANCELLATIONS_LOCK:
+        _clear_expired_cancellations(now)
+        pending = _PENDING_CANCELLATIONS.pop(whatsapp_phone, None)
+    return pending[0] if pending else None
+
+
+def _discard_pending_cancellation(whatsapp_phone: str) -> None:
+    with _PENDING_CANCELLATIONS_LOCK:
+        _PENDING_CANCELLATIONS.pop(whatsapp_phone, None)
+
+
+def _format_schedule(schedule: dict) -> str:
+    schedule_date = schedule["date"]
+    schedule_time = schedule["time"]
+    date_text = schedule_date.strftime("%d/%m/%Y") if hasattr(schedule_date, "strftime") else str(schedule_date)
+    time_text = schedule_time.strftime("%H:%M") if hasattr(schedule_time, "strftime") else str(schedule_time)
+    professional = schedule.get("professional")
+    professional_text = f" com {professional['name']}" if isinstance(professional, dict) else ""
+    return f"{date_text} às {time_text}{professional_text}"
+
+
+def handle_message(message: str, sender_phone: str | None = None) -> str:
     """Process user message and return response"""
+    try:
+        whatsapp_phone = normalize_whatsapp_phone(sender_phone)
+    except ValueError:
+        return "Não consegui identificar seu número de WhatsApp. Envie a mensagem novamente pelo canal da empresa."
+
+    if _is_cancel_confirmation(message):
+        if not whatsapp_phone:
+            return "Não há cancelamento aguardando confirmação para este número."
+        schedule_id = _consume_pending_cancellation(whatsapp_phone)
+        if schedule_id is None:
+            return "Não há cancelamento aguardando confirmação para este número."
+        try:
+            tools.cancel_my_schedule(schedule_id, whatsapp_phone)
+            logger.info(
+                "WhatsApp action completed action=cancel schedule_id=%s sender_phone=%s",
+                schedule_id,
+                whatsapp_phone,
+            )
+            return "Agendamento cancelado. O registro foi mantido no histórico da empresa."
+        except HTTPException as exc:
+            return f"Não foi possível cancelar o agendamento: {exc.detail}"
+
+    if whatsapp_phone:
+        _discard_pending_cancellation(whatsapp_phone)
+
     intent = parse_intent(message)
 
     try:
@@ -127,6 +207,22 @@ def handle_message(message: str) -> str:
 
         # Log intent com confidence
         logger.info(f"Intent: {action} (confidence: {confidence:.2f})")
+
+        if action in {"list_my_schedules", "create_schedule", "delete_schedule"} and not whatsapp_phone:
+            return "Para consultar, agendar ou cancelar, envie a mensagem pelo WhatsApp da empresa."
+
+        if action == "list_my_schedules":
+            schedules = tools.list_my_schedules(whatsapp_phone)
+            logger.info(
+                "WhatsApp action completed action=list_my_schedules sender_phone=%s count=%s",
+                whatsapp_phone,
+                len(schedules),
+            )
+            if not schedules:
+                return "Não encontrei agendamentos ativos futuros vinculados a este número."
+            return "Seus agendamentos:\n" + "\n".join(
+                f"- {_format_schedule(schedule)}" for schedule in schedules
+            )
 
         if action == "list_slots":
             requested_date = intent.get("date")
@@ -167,6 +263,12 @@ def handle_message(message: str) -> str:
                 customer_name=customer_name,
                 schedule_date=schedule_date,
                 schedule_time=schedule_time,
+                whatsapp_phone=whatsapp_phone,
+            )
+            logger.info(
+                "WhatsApp action completed action=create_schedule schedule_id=%s sender_phone=%s",
+                created["id"],
+                whatsapp_phone,
             )
             return (
                 f"✓ Agendamento confirmado para {created['customer_name']} em "
@@ -174,64 +276,46 @@ def handle_message(message: str) -> str:
             )
 
         if action == "delete_schedule":
-            customer_name = intent.get("customer_name")
             schedule_date = intent.get("date")
             schedule_time = intent.get("time")
+            schedules = tools.list_my_schedules(whatsapp_phone)
+            matches = [
+                schedule
+                for schedule in schedules
+                if (not schedule_date or _format_schedule(schedule).startswith(schedule_date))
+                and (
+                    not schedule_time
+                    or schedule["time"].strftime("%H:%M") == schedule_time[:5]
+                )
+            ]
 
-            if not customer_name and not schedule_date and not schedule_time:
+            if not schedule_date and not schedule_time:
+                if not schedules:
+                    return "Não encontrei agendamentos ativos futuros vinculados a este número."
                 return (
-                    "Para cancelar, me diga o nome do cliente e a data/hora do agendamento. "
-                    "Exemplo: 'Cancelar Maria Silva em 12/08/2026 às 09:30'."
+                    "Para proteger seus dados, escolha o agendamento pela data e hora:\n"
+                    + "\n".join(f"- {_format_schedule(schedule)}" for schedule in schedules)
                 )
+            if len(matches) != 1:
+                if not matches:
+                    return "Não encontrei um agendamento ativo desse horário vinculado a este número."
+                return "Encontrei mais de um agendamento. Informe a data e a hora exatas."
 
-            schedules = tools.list_schedules(limit=200)
-            normalized_customer = (customer_name or "").strip().lower()
-            normalized_date = schedule_date
-            normalized_time = schedule_time
-
-            match = None
-            for item in schedules:
-                item_customer_name = (
-                    item.get("customer", {}).get("name")
-                    if isinstance(item.get("customer"), dict)
-                    else item.get("customer_name") or item.get("customer") or ""
+            match = matches[0]
+            with _PENDING_CANCELLATIONS_LOCK:
+                _clear_expired_cancellations(time_module.time())
+                _PENDING_CANCELLATIONS[whatsapp_phone] = (
+                    match["id"],
+                    time_module.time() + _CANCELLATION_CONFIRMATION_TTL_SECONDS,
                 )
-                item_customer = (item_customer_name or "").strip().lower()
-                item_date = item.get("date")
-                item_time = item.get("time")
-
-                item_date_text = item_date.strftime("%d/%m/%Y") if hasattr(item_date, "strftime") else str(item_date or "")
-                item_time_text = item_time.strftime("%H:%M:%S") if hasattr(item_time, "strftime") else str(item_time or "")
-                if len(item_time_text) == 5:
-                    item_time_text = f"{item_time_text}:00"
-
-                if normalized_customer and item_customer != normalized_customer:
-                    continue
-                if normalized_date and item_date_text != normalized_date:
-                    continue
-                if normalized_time and item_time_text != normalized_time:
-                    continue
-
-                match = item
-                break
-
-            if not match:
-                return (
-                    f"Não encontrei um agendamento para {customer_name or 'esse cliente'} "
-                    f"{f'em {schedule_date}' if schedule_date else ''} {f'às {schedule_time}' if schedule_time else ''}."
-                )
-
-            scheduled_customer = (
-                match.get("customer", {}).get("name")
-                if isinstance(match.get("customer"), dict)
-                else match.get("customer_name") or match.get("customer") or "Cliente"
+            logger.info(
+                "WhatsApp action requested action=cancel schedule_id=%s sender_phone=%s",
+                match["id"],
+                whatsapp_phone,
             )
-            tools.delete_schedule(match["id"])
             return (
-                f"✓ Agendamento de {scheduled_customer} em "
-                f"{match.get('date') if isinstance(match.get('date'), str) else match.get('date').strftime('%d/%m/%Y')} "
-                f"às {match.get('time') if isinstance(match.get('time'), str) else match.get('time').strftime('%H:%M')} "
-                "foi cancelado com sucesso."
+                f"Confirme o cancelamento do agendamento de {_format_schedule(match)}. "
+                "Responda CONFIRMAR CANCELAMENTO em até 5 minutos."
             )
 
         # Default help
@@ -245,6 +329,8 @@ def handle_message(message: str) -> str:
 
     except HTTPException as exc:
         detail = str(exc.detail).lower()
+        if "vinculado ao telefone pela equipe" in detail:
+            return "Este cadastro precisa ter o WhatsApp vinculado pela equipe antes de agendar."
         if "fora do funcionamento" in detail:
             return (
                 "Esse horário está fora do horário de funcionamento. "

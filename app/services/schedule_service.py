@@ -73,6 +73,7 @@ def create_schedule(
     date_str: str,
     time_str: str,
     professional_id: int | None = None,
+    whatsapp_phone: str | None = None,
 ):
     schedule_date, schedule_time = parse_date_time(date_str, time_str)
     professional = _get_professional_or_none(bundle.professionals, professional_id)
@@ -90,7 +91,10 @@ def create_schedule(
             detail="Horário fora do funcionamento. Verifique os horários de trabalho disponíveis.",
         )
 
-    customer = bundle.customers.find_or_create(customer_name)
+    try:
+        customer = bundle.customers.find_or_create(customer_name, whatsapp_phone)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
     try:
         return bundle.schedules.create(
@@ -147,6 +151,20 @@ def delete_schedule(bundle, schedule_id: int):
     if not deleted:
         raise HTTPException(status_code=404, detail="Agendamento não encontrado")
     return {"detail": "Agendamento deletado"}
+
+
+def list_customer_schedules(bundle, whatsapp_phone: str):
+    return bundle.schedules.list_by_customer_phone(whatsapp_phone)
+
+
+def cancel_customer_schedule(bundle, schedule_id: int, whatsapp_phone: str):
+    schedule = bundle.schedules.cancel_by_customer_phone(schedule_id, whatsapp_phone)
+    if not schedule:
+        raise HTTPException(
+            status_code=404,
+            detail="Agendamento ativo não encontrado para este telefone.",
+        )
+    return schedule
 
 
 def update_schedule_status(bundle, schedule_id: int, new_status):

@@ -6,11 +6,15 @@ from app.database.session import Base
 
 class Customer(Base):
     __tablename__ = "customers"
-    __table_args__ = (UniqueConstraint("company_id", "name", name="uq_customer_company_name"),)
+    __table_args__ = (
+        UniqueConstraint("company_id", "name", name="uq_customer_company_name"),
+        UniqueConstraint("company_id", "whatsapp_phone", name="uq_customer_company_whatsapp_phone"),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     company_id = Column(Integer, ForeignKey("companies.id"), nullable=False, index=True)
     name = Column(String, nullable=False)
+    whatsapp_phone = Column(String, nullable=True)
 
     company = relationship("Company", back_populates="customers")
     schedules = relationship("Schedule", back_populates="customer")

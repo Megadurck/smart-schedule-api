@@ -136,28 +136,58 @@ class ScheduleApiClient:
             for item in response.json()
         ]
 
-    def list_schedules(self, skip: int = 0, limit: int = 20) -> list[dict]:
-        response = self._request("GET", "/schedule/", params={"skip": skip, "limit": limit})
+    def list_my_schedules(self, whatsapp_phone: str) -> list[dict]:
+        response = self._request(
+            "POST",
+            "/schedule/mine",
+            json={"whatsapp_phone": whatsapp_phone},
+        )
         self._raise_for_api_error(response)
-        return response.json()
+        return [
+            {
+                "id": item["id"],
+                "customer_name": item["customer"]["name"],
+                "date": datetime.strptime(item["date"], "%Y-%m-%d").date(),
+                "time": time.fromisoformat(item["time"]),
+                "status": item["status"],
+                "professional": item.get("professional"),
+            }
+            for item in response.json()
+        ]
 
-    def create_schedule(self, customer_name: str, date_str: str, time_str: str) -> dict:
+    def create_schedule(
+        self,
+        customer_name: str,
+        date_str: str,
+        time_str: str,
+        whatsapp_phone: str,
+    ) -> dict:
         response = self._request(
             "POST",
             "/schedule/",
-            json={"customer_name": customer_name, "date": date_str, "time": time_str},
+            json={
+                "customer_name": customer_name,
+                "date": date_str,
+                "time": time_str,
+                "whatsapp_phone": whatsapp_phone,
+            },
         )
         self._raise_for_api_error(response)
 
         payload = response.json()
         return {
+            "id": payload["id"],
             "customer_name": payload["customer"]["name"],
             "date": datetime.strptime(payload["date"], "%Y-%m-%d").date(),
             "time": time.fromisoformat(payload["time"]),
         }
 
-    def delete_schedule(self, schedule_id: int) -> None:
-        response = self._request("DELETE", f"/schedule/{schedule_id}")
+    def cancel_my_schedule(self, schedule_id: int, whatsapp_phone: str) -> None:
+        response = self._request(
+            "POST",
+            f"/schedule/{schedule_id}/cancel-mine",
+            json={"whatsapp_phone": whatsapp_phone},
+        )
         self._raise_for_api_error(response)
         return None
 

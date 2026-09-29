@@ -5,6 +5,7 @@ import logging
 import sys
 from datetime import date, datetime, time
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from fastapi import HTTPException
@@ -28,22 +29,95 @@ def test_parse_intent_simple_cancel_schedule():
     assert intent["time"] == "09:30:00"
 
 
-def test_handle_message_delete_schedule():
+def test_parse_intent_simple_lists_own_schedules():
+    intent = parse_intent_simple("Quero ver meus agendamentos")
+    assert intent["action"] == "list_my_schedules"
+
+
+def test_handle_message_cancel_requires_same_sender_confirmation():
     schedule = {
         "id": 42,
         "customer_name": "Maria Silva",
         "date": date(2026, 8, 12),
         "time": time(9, 30),
         "status": "pending",
+        "professional": None,
+    }
+    sender_phone = "5511999998888"
+
+    with patch("agent.agent.tools.list_my_schedules", return_value=[schedule]), patch(
+        "agent.agent.tools.cancel_my_schedule"
+    ) as cancel_schedule:
+        response = handle_message(
+            "Cancelar meu agendamento em 12/08/2026 às 09:30",
+            sender_phone=sender_phone,
+        )
+        assert "CONFIRMAR CANCELAMENTO" in response
+
+        rejected = handle_message(
+            "CONFIRMAR CANCELAMENTO",
+            sender_phone="5511888887777",
+        )
+        assert "não há cancelamento" in rejected.lower()
+        cancel_schedule.assert_not_called()
+
+        completed = handle_message(
+            "CONFIRMAR CANCELAMENTO",
+            sender_phone=sender_phone,
+        )
+
+    assert "cancelado" in completed.lower()
+    cancel_schedule.assert_called_once_with(42, sender_phone)
+
+
+def test_handle_message_lists_only_sender_schedules():
+    schedules = [{
+        "id": 1,
+        "customer_name": "Cliente",
+        "date": date(2026, 8, 12),
+        "time": time(9, 30),
+        "status": "pending",
+        "professional": None,
+    }]
+    sender_phone = "5511999998888"
+
+    with patch("agent.agent.tools.list_my_schedules", return_value=schedules) as list_mine:
+        response = handle_message("Quero ver meus agendamentos", sender_phone=sender_phone)
+
+    list_mine.assert_called_once_with(sender_phone)
+    assert "12/08/2026 às 09:30" in response
+
+
+def test_handle_message_booking_uses_sender_phone():
+    sender_phone = "5511999998888"
+    created = {
+        "id": 7,
+        "customer_name": "Maria Silva",
+        "date": date(2026, 8, 12),
+        "time": time(9, 30),
     }
 
-    with patch("agent.agent.tools.list_schedules", return_value=[schedule]), patch(
-        "agent.agent.tools.delete_schedule"
-    ) as delete_schedule:
-        response = handle_message("Cancelar Maria Silva em 12/08/2026 às 09:30")
+    with patch("agent.agent.tools.create_schedule", return_value=created) as create_schedule:
+        response = handle_message(
+            "Quero agendar Maria Silva em 12/08/2026 às 09:30",
+            sender_phone=sender_phone,
+        )
 
-    assert "cancelado" in response.lower()
-    delete_schedule.assert_called_once_with(42)
+    create_schedule.assert_called_once_with(
+        customer_name="Maria Silva",
+        schedule_date="12/08/2026",
+        schedule_time="09:30:00",
+        whatsapp_phone=sender_phone,
+    )
+    assert "agendamento confirmado" in response.lower()
+
+
+def test_neonize_group_jids_are_detected():
+    from agent.whatsapp_client import _is_group_jid
+
+    assert _is_group_jid(SimpleNamespace(Server="g.us"))
+    assert not _is_group_jid(SimpleNamespace(Server="s.whatsapp.net"))
+    assert not _is_group_jid(None)
 
 
 def test_handle_message_out_of_business_hours_is_natural():
@@ -54,7 +128,10 @@ def test_handle_message_out_of_business_hours_is_natural():
             detail="Horário fora do funcionamento. Verifique os horários de trabalho disponíveis.",
         ),
     ):
-        response = handle_message("Quero agendar Maria Silva em 12/08/2026 às 07:00")
+        response = handle_message(
+            "Quero agendar Maria Silva em 12/08/2026 às 07:00",
+            sender_phone="5511999998888",
+        )
 
     assert "fora do horário de funcionamento" in response.lower()
     assert "escolha outro horário" in response.lower()

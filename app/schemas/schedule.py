@@ -5,9 +5,10 @@ Este módulo concentra os contratos de entrada e saída da API de agendamentos.
 
 from datetime import date, time, datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from app.enum.schedule_status import ScheduleStatus
+from app.core.phone import normalize_whatsapp_phone
 
 
 # ---------------------------------------------------------------------------
@@ -24,6 +25,24 @@ class ScheduleCreate(BaseModel):
     # Hora no formato HH:MM:SS (regra de parse fica no service).
     time: str
     professional_id: int | None = None
+    whatsapp_phone: str | None = None
+
+    @field_validator("whatsapp_phone")
+    @classmethod
+    def normalize_phone(cls, value: str | None) -> str | None:
+        return normalize_whatsapp_phone(value)
+
+
+class WhatsAppCustomerRequest(BaseModel):
+    whatsapp_phone: str
+
+    @field_validator("whatsapp_phone")
+    @classmethod
+    def normalize_phone(cls, value: str) -> str:
+        normalized = normalize_whatsapp_phone(value)
+        if normalized is None:
+            raise ValueError("Informe um telefone WhatsApp válido.")
+        return normalized
 
 
 # ---------------------------------------------------------------------------

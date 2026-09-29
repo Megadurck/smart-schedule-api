@@ -1,5 +1,5 @@
 import os
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect
 from sqlalchemy import text
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import sessionmaker
@@ -31,10 +31,12 @@ def get_db():
 
 def ensure_company_admin_columns():
     """Garante colunas administrativas da tabela companies em bases legadas."""
-    with engine.begin() as conn:
-        rows = conn.execute(text("PRAGMA table_info(companies)")).fetchall()
-        existing_columns = {row[1] for row in rows}
+    inspector = inspect(engine)
+    if not inspector.has_table("companies"):
+        return
 
+    existing_columns = {column["name"] for column in inspector.get_columns("companies")}
+    with engine.begin() as conn:
         if "display_name" not in existing_columns:
             conn.execute(text("ALTER TABLE companies ADD COLUMN display_name VARCHAR"))
         if "cancellation_policy" not in existing_columns:
@@ -61,6 +63,24 @@ def ensure_company_admin_columns():
             conn.execute(text("ALTER TABLE companies ADD COLUMN bot_name VARCHAR"))
         if "whatsapp_number" not in existing_columns:
             conn.execute(text("ALTER TABLE companies ADD COLUMN whatsapp_number VARCHAR"))
+
+
+def ensure_customer_whatsapp_phone_column():
+    """Add the verified WhatsApp contact field to databases created by older versions."""
+    inspector = inspect(engine)
+    if not inspector.has_table("customers"):
+        return
+
+    existing_columns = {column["name"] for column in inspector.get_columns("customers")}
+    with engine.begin() as conn:
+        if "whatsapp_phone" not in existing_columns:
+            conn.execute(text("ALTER TABLE customers ADD COLUMN whatsapp_phone VARCHAR"))
+        conn.execute(
+            text(
+                "CREATE UNIQUE INDEX IF NOT EXISTS uq_customer_company_whatsapp_phone "
+                "ON customers(company_id, whatsapp_phone)"
+            )
+        )
 
 
 def ensure_schedule_constraints():

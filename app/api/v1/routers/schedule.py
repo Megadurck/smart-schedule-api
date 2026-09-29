@@ -8,6 +8,7 @@ from app.schemas import (
     ScheduleStatusUpdate,
     ScheduleSuggestionRequest,
     ScheduleSuggestionResponse,
+    WhatsAppCustomerRequest,
 )
 from app.services import schedule_service
 
@@ -40,6 +41,27 @@ def list_available_slots(
     )
 
 
+@router.post("/mine", response_model=list[ScheduleResponse])
+def list_my_schedules(
+    payload: WhatsAppCustomerRequest,
+    bundle: ScheduleBundle = Depends(get_schedule_bundle),
+):
+    return schedule_service.list_customer_schedules(bundle, payload.whatsapp_phone)
+
+
+@router.post("/{schedule_id}/cancel-mine", response_model=ScheduleResponse)
+def cancel_my_schedule(
+    schedule_id: int,
+    payload: WhatsAppCustomerRequest,
+    bundle: ScheduleBundle = Depends(get_schedule_bundle),
+):
+    return schedule_service.cancel_customer_schedule(
+        bundle,
+        schedule_id,
+        payload.whatsapp_phone,
+    )
+
+
 # 🔹 OBTER AGENDAMENTO POR ID
 @router.get("/{id}", response_model=ScheduleResponse)
 def get_schedule(id: int, bundle: ScheduleBundle = Depends(get_schedule_bundle)):
@@ -60,6 +82,7 @@ def create_schedule(
         payload.date,
         payload.time,
         payload.professional_id,
+        payload.whatsapp_phone,
     )
 
 

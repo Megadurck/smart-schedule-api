@@ -10,6 +10,7 @@ from app.schemas.schedule import (
     ScheduleSuggestionItem,
     ScheduleSuggestionResponse,
     AvailableSlotResponse,
+    WhatsAppCustomerRequest,
 )
 from app.schemas.customer import CustomerCreate, CustomerRecord, CustomerUpdate
 from app.schemas.professional import ProfessionalCreate, ProfessionalResponse, ProfessionalUpdate
@@ -34,6 +35,7 @@ __all__ = [
     "ScheduleSuggestionItem",
     "ScheduleSuggestionResponse",
     "AvailableSlotResponse",
+    "WhatsAppCustomerRequest",
     "WorkingHoursCreate",
     "WorkingHoursResponse",
     "CustomerCreate",

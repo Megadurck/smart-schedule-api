@@ -26,13 +26,23 @@ def list_available_slots(
 	return get_api_client().list_available_slots(start_date, days_ahead=days_ahead, limit=limit)
 
 
-def list_schedules(skip: int = 0, limit: int = 20) -> list[dict]:
-	return get_api_client().list_schedules(skip=skip, limit=limit)
+def list_my_schedules(whatsapp_phone: str) -> list[dict]:
+	return get_api_client().list_my_schedules(whatsapp_phone)
 
 
-def create_schedule(customer_name: str, schedule_date: str, schedule_time: str) -> dict:
-	return get_api_client().create_schedule(customer_name, schedule_date, schedule_time)
+def create_schedule(
+	customer_name: str,
+	schedule_date: str,
+	schedule_time: str,
+	whatsapp_phone: str,
+) -> dict:
+	return get_api_client().create_schedule(
+		customer_name,
+		schedule_date,
+		schedule_time,
+		whatsapp_phone,
+	)
 
 
-def delete_schedule(schedule_id: int) -> None:
-	return get_api_client().delete_schedule(schedule_id)
+def cancel_my_schedule(schedule_id: int, whatsapp_phone: str) -> None:
+	return get_api_client().cancel_my_schedule(schedule_id, whatsapp_phone)

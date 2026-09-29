@@ -12,6 +12,7 @@ from fastapi.concurrency import run_in_threadpool
 
 from agent.agent import handle_message
 from agent.whatsapp_client import send_whatsapp_message
+from app.core.phone import normalize_whatsapp_phone
 
 router = APIRouter(prefix="/whatsapp", tags=["WhatsApp"])
 
@@ -51,8 +52,13 @@ async def receive_webhook(request: Request):
     if not from_number or not body:
         return Response(status_code=200)
 
-    phone = from_number.replace("whatsapp:", "")
-    reply = await run_in_threadpool(handle_message, body)
+    try:
+        phone = normalize_whatsapp_phone(from_number.replace("whatsapp:", ""))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Telefone de origem invalido.") from exc
+    if not phone:
+        raise HTTPException(status_code=400, detail="Telefone de origem invalido.")
+    reply = await run_in_threadpool(handle_message, body, phone)
     await run_in_threadpool(send_whatsapp_message, phone, reply)
 
     return Response(status_code=200)

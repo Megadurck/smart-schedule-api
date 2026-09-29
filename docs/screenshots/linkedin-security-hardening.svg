@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1500" viewBox="0 0 1200 1500">
+  <defs>
+    <pattern id="grid" width="36" height="36" patternUnits="userSpaceOnUse">
+      <path d="M36 0H0V36" fill="none" stroke="#d7d5cc" stroke-width="1" opacity=".45"/>
+    </pattern>
+    <linearGradient id="panel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#242a2b"/>
+      <stop offset="1" stop-color="#111718"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="1500" fill="#f0efe8"/>
+  <rect width="1200" height="1500" fill="url(#grid)"/>
+  <rect x="58" y="58" width="1084" height="1384" rx="8" fill="#f7f6f0" stroke="#242a2b" stroke-width="2"/>
+
+  <g font-family="Arial, Helvetica, sans-serif">
+    <rect x="96" y="98" width="48" height="48" rx="4" fill="#242a2b"/>
+    <path d="M120 107 135 113V124c0 10-6 17-15 21-9-4-15-11-15-21v-11z" fill="none" stroke="#c7f36b" stroke-width="3"/>
+    <path d="m113 123 5 5 10-11" fill="none" stroke="#c7f36b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="158" y="119" fill="#242a2b" font-size="22" font-weight="700" letter-spacing="1">SMART SCHEDULE</text>
+    <text x="158" y="145" fill="#6e7774" font-size="14" letter-spacing="2">SECURITY UPDATE  /  2026</text>
+    <rect x="890" y="104" width="210" height="38" rx="19" fill="#e6eadc"/>
+    <circle cx="913" cy="123" r="5" fill="#38866e"/>
+    <text x="928" y="128" fill="#315d4f" font-size="13" font-weight="700" letter-spacing="1">HARDENED BY DESIGN</text>
+
+    <text x="96" y="260" fill="#242a2b" font-size="74" font-weight="800" letter-spacing="-2">SEGURANÇA</text>
+    <text x="96" y="340" fill="#242a2b" font-size="74" font-weight="800" letter-spacing="-2">NO FLUXO.</text>
+    <text x="98" y="394" fill="#59625e" font-size="25">Proteção aplicada onde o produto realmente opera.</text>
+
+    <g transform="translate(96 452)">
+      <rect width="1008" height="250" rx="8" fill="url(#panel)"/>
+      <path d="M0 202H1008" stroke="#515b59" stroke-width="1"/>
+      <text x="32" y="43" fill="#c7f36b" font-size="13" font-weight="700" letter-spacing="2">IDENTIDADE  /  WHATSAPP</text>
+      <text x="32" y="101" fill="#f7f6f0" font-size="29" font-weight="700">O número de origem é a identidade.</text>
+      <text x="32" y="143" fill="#c4cbc6" font-size="19">Cada cliente consulta apenas a própria agenda, dentro da empresa.</text>
+      <text x="32" y="174" fill="#c4cbc6" font-size="19">Cadastros antigos exigem vínculo confirmado pela equipe.</text>
+      <g transform="translate(846 43)">
+        <rect x="0" y="0" width="110" height="106" rx="7" fill="#303a39" stroke="#718075"/>
+        <path d="M55 18 79 28V47c0 20-10 32-24 39-14-7-24-19-24-39V28z" fill="none" stroke="#c7f36b" stroke-width="4"/>
+        <path d="m45 48 8 8 15-18" fill="none" stroke="#c7f36b" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+      <text x="32" y="231" fill="#a9b2ad" font-size="13" font-weight="700" letter-spacing="1.5">ISOLAMENTO POR TELEFONE + EMPRESA</text>
+      <text x="932" y="231" fill="#c7f36b" font-size="14" font-weight="700">01</text>
+    </g>
+
+    <g transform="translate(96 726)">
+      <rect width="490" height="244" rx="8" fill="#e8eee4" stroke="#c5d1c5"/>
+      <rect x="26" y="26" width="42" height="42" rx="4" fill="#c7f36b"/>
+      <path d="M39 47h16m-8-8 8 8-8 8" fill="none" stroke="#242a2b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="26" y="108" fill="#242a2b" font-size="25" font-weight="700">Cancelar não apaga.</text>
+      <text x="26" y="148" fill="#59625e" font-size="18">Confirmação pelo mesmo remetente,</text>
+      <text x="26" y="176" fill="#59625e" font-size="18">com prazo de 5 minutos.</text>
+      <text x="26" y="218" fill="#315d4f" font-size="13" font-weight="700" letter-spacing="1.5">HISTÓRICO PRESERVADO  /  02</text>
+    </g>
+
+    <g transform="translate(614 726)">
+      <rect width="490" height="244" rx="8" fill="#e8eaf2" stroke="#c8ccda"/>
+      <rect x="26" y="26" width="42" height="42" rx="4" fill="#6d82d8"/>
+      <path d="M39 47h16m-8-8 8 8-8 8" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="26" y="108" fill="#242a2b" font-size="25" font-weight="700">Imagem sem segredos.</text>
+      <text x="26" y="148" fill="#59625e" font-size="18">.env, banco local e ambiente virtual</text>
+      <text x="26" y="176" fill="#59625e" font-size="18">fora do contexto e da imagem Docker.</text>
+      <text x="26" y="218" fill="#46578f" font-size="13" font-weight="700" letter-spacing="1.5">BUILD EXPLÍCITO  /  03</text>
+    </g>
+
+    <g transform="translate(96 1000)">
+      <path d="M0 0H1008" stroke="#242a2b" stroke-width="2"/>
+      <text x="0" y="48" fill="#6e7774" font-size="13" font-weight="700" letter-spacing="2">ENGENHARIA COM VERIFICAÇÃO</text>
+      <text x="0" y="111" fill="#242a2b" font-size="47" font-weight="800">100 testes passaram.</text>
+      <text x="0" y="151" fill="#59625e" font-size="19">Backend validado  ·  build e lint do frontend aprovados</text>
+      <g transform="translate(788 57)">
+        <circle cx="42" cy="42" r="40" fill="#242a2b"/>
+        <path d="m24 42 12 12 25-27" fill="none" stroke="#c7f36b" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+    </g>
+
+    <g transform="translate(96 1264)">
+      <rect width="1008" height="1" fill="#c5c7bd"/>
+      <text x="0" y="49" fill="#242a2b" font-size="17" font-weight="700">SMART SCHEDULE</text>
+      <text x="0" y="77" fill="#6e7774" font-size="14">API  ·  MULTI-TENANT  ·  WHATSAPP</text>
+      <text x="1008" y="57" fill="#6e7774" font-size="14" text-anchor="end">SEGURANÇA É PARTE DO PRODUTO.</text>
+    </g>
+  </g>
+</svg>

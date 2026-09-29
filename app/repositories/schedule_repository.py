@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+from datetime import date
+
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
 from app.models.schedule_model import Schedule
+from app.models.customer import Customer
 from app.enum.schedule_status import ScheduleStatus
 
 
@@ -129,6 +132,46 @@ class ScheduleRepository:
             .filter(Schedule.customer_id == customer_id, Schedule.company_id == self.company_id)
             .order_by(Schedule.date.desc())
             .all()
+        )
+
+    def list_by_customer_phone(self, whatsapp_phone: str) -> list[Schedule]:
+        return (
+            self.db.query(Schedule)
+            .join(Schedule.customer)
+            .options(joinedload(Schedule.customer), joinedload(Schedule.professional))
+            .filter(
+                Schedule.company_id == self.company_id,
+                Customer.whatsapp_phone == whatsapp_phone,
+                Schedule.date >= date.today(),
+                Schedule.status.in_((ScheduleStatus.PENDING, ScheduleStatus.CONFIRMED)),
+            )
+            .order_by(Schedule.date, Schedule.time)
+            .all()
+        )
+
+    def cancel_by_customer_phone(self, schedule_id: int, whatsapp_phone: str) -> Schedule | None:
+        schedule = (
+            self.db.query(Schedule)
+            .join(Schedule.customer)
+            .filter(
+                Schedule.id == schedule_id,
+                Schedule.company_id == self.company_id,
+                Customer.whatsapp_phone == whatsapp_phone,
+                Schedule.status.in_((ScheduleStatus.PENDING, ScheduleStatus.CONFIRMED)),
+            )
+            .one_or_none()
+        )
+        if not schedule:
+            return None
+
+        schedule.status = ScheduleStatus.CANCELLED
+        self.db.commit()
+        self.db.refresh(schedule)
+        return (
+            self.db.query(Schedule)
+            .options(joinedload(Schedule.customer), joinedload(Schedule.professional))
+            .filter(Schedule.id == schedule.id, Schedule.company_id == self.company_id)
+            .one_or_none()
         )
 
     def count_active_by_date(self, schedule_date) -> int:

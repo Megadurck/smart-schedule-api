@@ -9,6 +9,7 @@ from app.database.session import (
     engine,
     Base,
     ensure_company_admin_columns,
+    ensure_customer_whatsapp_phone_column,
     ensure_schedule_constraints,
 )
 from agent.whatsapp_client import start_neonize_listener, stop_neonize_listener
@@ -24,6 +25,7 @@ async def lifespan(app: FastAPI):
     # Startup: Criar tabelas do banco
     Base.metadata.create_all(bind=engine)
     ensure_company_admin_columns()
+    ensure_customer_whatsapp_phone_column()
     ensure_schedule_constraints()
 
     if os.getenv("WHATSAPP_PROVIDER", "neonize").strip().lower() == "neonize":
